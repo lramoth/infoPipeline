@@ -41,3 +41,12 @@
 - Summary: Implemented `researcher.py` with a no-input Gemini search-grounded API call, the specified seven-day techno-production prompt, JSON item extraction, preservation of Gemini grounding metadata when available, and output validation for item count and required fields. Added focused tests in `test_researcher.py`; all 11 repository tests pass.
 - Assumptions: Used the Gemini `generateContent` REST endpoint with the `google_search` tool, defaulted to `gemini-2.5-flash`, represented the JSON-safe result as `{"items": [...], "grounding_metadata": ...}`, and surfaced API or malformed-response failures as `ResearcherError` so the Planner records validation failure and halts.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-20
+
+- Eval file used: `evals/researcher_feature.eval.md`.
+- Scenario 1, Successful run: PASS — the Researcher returns at least three complete items, preserves available grounding metadata, and validation accepts the output.
+- Scenario 2, Too Few Items: PASS — validation rejects an output containing fewer than three items.
+- Scenario 3, Incomplete Items: PASS — validation rejects an output when any item lacks a title, URL, or summary.
+- Scenario 4, Gemini Errors: PASS — Gemini API errors are surfaced as `ResearcherError`, providing an error report instead of valid output.
+- Overall verdict: PASS.
