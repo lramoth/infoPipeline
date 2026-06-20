@@ -31,13 +31,22 @@ validate-before-advance rule.
 }
 ```
 
-**Stage contract** — each stage the Planner runs is described by:
-- A stage has a name, a way to produce output, and a way to say pass/fail-with-reason
+## Stage behavior — each stage provided to the Planner has:
+
+- a name
+- executable work that produces an output
+- validation criteria that evaluate that output
+- a validation result containing:
+    - pass/fail
+    - a human-readable reason
 
 ## Failure handling
 
 - On failure halt the planner
 - On failure the caller is told which stage failed and why
+- If a stage raises an error while running or validating, treat that stage as failed.
+- Record the failure in the ledger with the stage name, failed status, and error reason.
+- Do not run remaining stages.
 
 ## Behavior
 
