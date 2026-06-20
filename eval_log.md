@@ -50,3 +50,10 @@
 - Scenario 3, Incomplete Items: PASS — validation rejects an output when any item lacks a title, URL, or summary.
 - Scenario 4, Gemini Errors: PASS — Gemini API errors are surfaced as `ResearcherError`, providing an error report instead of valid output.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-20
+
+- Spec used: `specs/env_config_feature.md`.
+- Summary of work completed: Added a standard-library `.env` configuration loader for the declared Gemini and Telegram values, including explicit missing-file and missing-key errors. Updated the Researcher so its Gemini request loads `GEMINI_API_KEY` from the project `.env` file at call time. Added focused tests without making external API calls.
+- Assumptions made: Basic dotenv syntax consists of blank lines, comments, and `KEY=VALUE` entries with optional matching single or double quotes. The reusable loader will be called by future Curator and Telegram delivery modules because those external-call boundaries do not exist yet.
+- Gaps or suspected bugs: Curator and Telegram delivery are described by the architecture but are not implemented in the current repository, so there are no calls in those components to wire yet.

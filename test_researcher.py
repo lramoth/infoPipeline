@@ -1,7 +1,9 @@
 import io
 import json
+import tempfile
 import unittest
 import urllib.error
+from pathlib import Path
 from unittest.mock import patch
 
 from researcher import RESEARCH_PROMPT, Researcher, ResearcherError
@@ -16,6 +18,14 @@ class FakeResponse(io.BytesIO):
 
 
 class ResearcherTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary_directory = tempfile.TemporaryDirectory()
+        self.env_path = Path(self.temporary_directory.name) / ".env"
+        self.env_path.write_text("GEMINI_API_KEY=test-key\n", encoding="utf-8")
+
+    def tearDown(self):
+        self.temporary_directory.cleanup()
+
     def test_searches_gemini_and_preserves_grounding_metadata(self):
         items = [
             {"title": f"Item {number}", "url": f"https://example.com/{number}", "summary": "News."}
@@ -37,9 +47,10 @@ class ResearcherTests(unittest.TestCase):
             "researcher.urllib.request.urlopen",
             return_value=FakeResponse(json.dumps(response).encode("utf-8")),
         ) as urlopen:
-            output = Researcher(api_key="test-key").run()
+            output = Researcher(env_path=self.env_path).run()
 
         request = urlopen.call_args.args[0]
+        self.assertEqual(request.headers["X-goog-api-key"], "test-key")
         request_body = json.loads(request.data)
         self.assertEqual(request_body["contents"][0]["parts"][0]["text"], RESEARCH_PROMPT)
         self.assertIn("last 7 days", RESEARCH_PROMPT)
@@ -87,7 +98,7 @@ class ResearcherTests(unittest.TestCase):
             side_effect=urllib.error.URLError("service unavailable"),
         ):
             with self.assertRaisesRegex(ResearcherError, "Gemini API search failed"):
-                Researcher(api_key="test-key").run()
+                Researcher(env_path=self.env_path).run()
 
 
 if __name__ == "__main__":

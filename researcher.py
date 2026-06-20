@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
-import os
 import urllib.error
 import urllib.request
+from pathlib import Path
 from typing import Any
+
+from env_config import PROJECT_ENV_PATH, load_env_value
 
 
 GEMINI_MODEL = "gemini-2.5-flash"
@@ -39,18 +41,17 @@ class Researcher:
 
     def __init__(
         self,
-        api_key: str | None = None,
         model: str = GEMINI_MODEL,
         endpoint: str = GEMINI_ENDPOINT,
+        env_path: str | Path = PROJECT_ENV_PATH,
     ) -> None:
-        self.api_key = api_key if api_key is not None else os.environ.get("GEMINI_API_KEY")
         self.model = model
         self.endpoint = endpoint.rstrip("/")
+        self.env_path = Path(env_path)
 
     def run(self) -> dict[str, Any]:
         """Search Gemini without Planner input and return items plus grounding data."""
-        if not self.api_key:
-            raise ResearcherError("GEMINI_API_KEY is not set")
+        api_key = load_env_value("GEMINI_API_KEY", self.env_path)
 
         payload = {
             "contents": [{"parts": [{"text": RESEARCH_PROMPT}]}],
@@ -61,7 +62,7 @@ class Researcher:
             data=json.dumps(payload).encode("utf-8"),
             headers={
                 "Content-Type": "application/json",
-                "x-goog-api-key": self.api_key,
+                "x-goog-api-key": api_key,
             },
             method="POST",
         )
@@ -102,4 +103,3 @@ class Researcher:
                 return False, f"Research item {index} is missing a title, url, or summary"
 
         return True, "At least 3 items contain a title, url, and summary"
-
