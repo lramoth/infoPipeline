@@ -28,5 +28,38 @@
 - Code satisfies the spec.
 - Tests cover only what the spec explicitly states — no speculative
   edge-case tests for unstated behavior.
-- Append a `## Build log` entry to eval_log.md: what you built (or
+- Append a `## Build log — YYYY-MM-DD` entry to eval_log.md: what you built (or
   documented), the spec used, any assumptions, gaps, or suspected bugs.
+
+
+## Eval log conventions
+`eval_log.md` is append-only.
+
+Build sessions append entries under:
+
+```markdown
+## Build log — YYYY-MM-DD
+```
+
+and must include:
+
+- spec used
+- summary of work completed
+- assumptions made
+- gaps or suspected bugs
+
+Evaluation sessions append entries under:
+
+```markdown
+## Evaluation — YYYY-MM-DD
+```
+
+and must include:
+
+- eval file used
+- PASS/FAIL result for each scenario
+- overall verdict
+
+Build sessions must never write evaluation entries.
+
+Evaluation sessions must never write build-log entries.

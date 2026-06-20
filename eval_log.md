@@ -1,5 +1,6 @@
 ## Open questions
 
+- What requirements should `specs/researcher_feature.md` contain? The requested spec exists but is empty (zero bytes), so the Researcher behavior cannot be implemented without guessing.
 - What requirements should `evals/planner_feature.eval.md` contain? The requested spec exists but is empty (zero bytes), so there is no defined behavior to implement.
 - Where is the requested spec `eval/planner_feature.eval.md`? That path does not exist, so its requirements cannot be read or implemented.
 - What are the exact stage attribute/method names and signatures for the name, executable work, and validation criteria?
@@ -9,6 +10,8 @@
 - When stage execution raises before producing output, what value must be stored in the ledger's required `output` field?
 
 ## Build log
+
+- 2026-06-20: Read `AGENTS.md`, `architecture.md`, and `specs/researcher_feature.md`. The requested Researcher spec is empty (zero bytes). Per `AGENTS.md`, logged the missing requirements under Open questions and stopped without changing implementation or tests. Spec used: `specs/researcher_feature.md` (empty). Assumptions: none. Gap: the spec needs requirement content before implementation can proceed.
 
 - 2026-06-19: Read `AGENTS.md`, `architecture.md`, and the corrected `evals/planner_feature.eval.md`. The requested spec exists but is empty (zero bytes). Per `AGENTS.md`, logged the missing requirements under Open questions and stopped without changing implementation or tests. Spec used: `evals/planner_feature.eval.md` (empty). Assumptions: none. Gap: the spec needs requirement content before implementation can proceed.
 
