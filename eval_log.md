@@ -57,3 +57,11 @@
 - Summary of work completed: Added a standard-library `.env` configuration loader for the declared Gemini and Telegram values, including explicit missing-file and missing-key errors. Updated the Researcher so its Gemini request loads `GEMINI_API_KEY` from the project `.env` file at call time. Added focused tests without making external API calls.
 - Assumptions made: Basic dotenv syntax consists of blank lines, comments, and `KEY=VALUE` entries with optional matching single or double quotes. The reusable loader will be called by future Curator and Telegram delivery modules because those external-call boundaries do not exist yet.
 - Gaps or suspected bugs: Curator and Telegram delivery are described by the architecture but are not implemented in the current repository, so there are no calls in those components to wire yet.
+
+## Evaluation — 2026-06-20
+
+- Eval file used: `evals/env_config_features.eval.md`.
+- Scenario 1, `.env` file missing: PASS — loading a required value from a nonexistent `.env` file raises `EnvConfigError` to the caller.
+- Scenario 2, required key missing: PASS — loading a required key absent from an existing `.env` file raises `EnvConfigError` to the caller.
+- Scenario 3, required value missing: PASS — required keys with unquoted or quoted empty values raise `EnvConfigError` to the caller.
+- Overall verdict: PASS.
