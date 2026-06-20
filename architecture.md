@@ -17,8 +17,7 @@ plain code.
   advancing to the next, and marks the run done. Runs once daily via cron,
   hosted by OpenClaw.
 - **Researcher** (Gemini, search-grounded API) — finds raw candidate
-  items via search. Structured extraction, low reasoning demand — a local
-  model is sufficient: free, fast, no judgment call needed.
+  items via search. Structured extraction, low reasoning demand.
 - **Curator** (Gemini API prompt) — ranks and filters the
   researcher's raw items by personal taste. The one stage doing real
   judgment: distinguishing Polegroup-adjacent signal from generic festival
