@@ -34,3 +34,10 @@
 ## Build log
 
 - 2026-06-19: Evaluated and completed the Planner against `evals/planner_feature.eval.md`. The existing pure-stdlib implementation satisfies all four specified scenarios. Updated the successful-run test to explicitly verify that every executed stage is recorded as `done`; ran all six focused tests successfully. Assumptions: none. Gaps or suspected bugs: none.
+
+## Build log — 2026-06-20
+
+- Spec used: `specs/researcher_feature.md`.
+- Summary: Implemented `researcher.py` with a no-input Gemini search-grounded API call, the specified seven-day techno-production prompt, JSON item extraction, preservation of Gemini grounding metadata when available, and output validation for item count and required fields. Added focused tests in `test_researcher.py`; all 11 repository tests pass.
+- Assumptions: Used the Gemini `generateContent` REST endpoint with the `google_search` tool, defaulted to `gemini-2.5-flash`, represented the JSON-safe result as `{"items": [...], "grounding_metadata": ...}`, and surfaced API or malformed-response failures as `ResearcherError` so the Planner records validation failure and halts.
+- Gaps or suspected bugs: None.

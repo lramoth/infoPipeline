@@ -1,7 +1,8 @@
 # Agent Instructions — infoPipeline
 
 ## Stack & conventions
-- Python (planner stage is pure stdlib, no dependencies beyond it).
+- Prefer the Python standard library when practical. Add dependencies only when they materially simplify implementation.
+- Planner is the coordinator.
 - Researcher stage call Gemini API search
 - Curator stage takes search results and applies a prompt (via the Gemini
   API) that curates what was found.

@@ -58,7 +58,7 @@ pipeline at that stage rather than passing bad output forward.
 - **Telegram** — Final delivery. Bot already paired and confirmed
   bidirectional.
 - **Ollama (local)** — Writer. 
-- .eval contains GEMINI_API_KEY, TELEGRAM_BOT_TOKEN, and TELEGRAM_CHAT_ID
+- .env contains GEMINI_API_KEY, TELEGRAM_BOT_TOKEN, and TELEGRAM_CHAT_ID
 
 ## Runtime
 
