@@ -40,6 +40,7 @@ validate-before-advance rule.
     - pass/fail
     - a human-readable reason
 
+
 ## Failure handling
 
 - On failure halt the planner

@@ -13,6 +13,10 @@
 - Your only source of requirements is the spec file referenced in the prompt.
 - If a requirement is ambiguous or missing, log it under "Open questions"
   in eval_log.md and stop — don't guess.
+- If implementation details are unspecified, choose the simplest reasonable
+  implementation that satisfies the spec. This includes module names,
+  function names, class names, internal data structures, and helper methods,
+  unless the spec explicitly defines them.
 - Calls to Gemini and Telegram aren't needed while implementing logic.
 - Real calls happen only during the eval step, run as a separate session:
   it should call the real Gemini API and the real Telegram endpoint, since
