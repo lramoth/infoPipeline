@@ -54,6 +54,7 @@ class PlannerTests(unittest.TestCase):
         ledger = self.read_ledger()
         self.assertEqual(ledger["date"], date.today().isoformat())
         self.assertEqual(ledger["stages"]["first"]["status"], "done")
+        self.assertEqual(ledger["stages"]["second"]["status"], "done")
         self.assertEqual(ledger["stages"]["first"]["output"], {"item": 1})
         self.assertEqual(
             ledger["stages"]["first"]["validation_reason"], "first passed"
