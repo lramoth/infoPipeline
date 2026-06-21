@@ -89,3 +89,11 @@
 - Summary of work completed: Moved the Researcher and Curator prompts from Python source into `prompts/researchers/techno_news.md` and `prompts/curators/polegroup_techno.md`; added the blank `prompts/writers/telegram_brief.md` placeholder; added shared UTF-8 runtime prompt loading; made both implemented stages configurable with a prompt path; and added focused tests for configured prompt use plus missing and unreadable prompt failures. All 29 repository tests pass.
 - Assumptions made: Prompt files are UTF-8 text, are configured through an optional `prompt_path` constructor argument, and are read on each stage run so prompt edits take effect without restarting or modifying Python source.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-21
+
+- Eval file used: `evals/prompt_loading_feature.eval.md`.
+- Scenario 1, Missing prompt file: PASS — running either implemented stage with a nonexistent configured markdown prompt reports an error and does not produce a successful result.
+- Scenario 2, Alternate prompt file: PASS — each implemented stage uses the contents of its configured markdown file in the outgoing stage prompt under controlled inputs.
+- Scenario 3, Default prompt files exist: PASS — all three required Researcher, Curator, and Writer markdown prompt paths exist in the repository.
+- Overall verdict: PASS.
