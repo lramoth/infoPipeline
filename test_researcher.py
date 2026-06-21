@@ -6,7 +6,7 @@ import urllib.error
 from pathlib import Path
 from unittest.mock import patch
 
-from researcher import RESEARCH_PROMPT, Researcher, ResearcherError
+from researcher import Researcher, ResearcherError
 
 
 class FakeResponse(io.BytesIO):
@@ -22,6 +22,8 @@ class ResearcherTests(unittest.TestCase):
         self.temporary_directory = tempfile.TemporaryDirectory()
         self.env_path = Path(self.temporary_directory.name) / ".env"
         self.env_path.write_text("GEMINI_API_KEY=test-key\n", encoding="utf-8")
+        self.prompt_path = Path(self.temporary_directory.name) / "research.md"
+        self.prompt_path.write_text("custom research prompt", encoding="utf-8")
 
     def tearDown(self):
         self.temporary_directory.cleanup()
@@ -47,13 +49,12 @@ class ResearcherTests(unittest.TestCase):
             "researcher.urllib.request.urlopen",
             return_value=FakeResponse(json.dumps(response).encode("utf-8")),
         ) as urlopen:
-            output = Researcher(env_path=self.env_path).run()
+            output = Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
 
         request = urlopen.call_args.args[0]
         self.assertEqual(request.headers["X-goog-api-key"], "test-key")
         request_body = json.loads(request.data)
-        self.assertEqual(request_body["contents"][0]["parts"][0]["text"], RESEARCH_PROMPT)
-        self.assertIn("last 7 days", RESEARCH_PROMPT)
+        self.assertEqual(request_body["contents"][0]["parts"][0]["text"], "custom research prompt")
         self.assertEqual(request_body["tools"], [{"google_search": {}}])
         self.assertEqual(output["items"], items)
         self.assertEqual(output["grounding_metadata"], grounding_metadata)
@@ -98,7 +99,18 @@ class ResearcherTests(unittest.TestCase):
             side_effect=urllib.error.URLError("service unavailable"),
         ):
             with self.assertRaisesRegex(ResearcherError, "Gemini API search failed"):
-                Researcher(env_path=self.env_path).run()
+                Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
+
+    def test_missing_prompt_file_reports_failure(self):
+        missing_path = Path(self.temporary_directory.name) / "missing.md"
+
+        with self.assertRaisesRegex(ResearcherError, "could not be loaded.*does not exist"):
+            Researcher(env_path=self.env_path, prompt_path=missing_path).run()
+
+    def test_unreadable_prompt_file_reports_failure(self):
+        with patch("prompt_loader.Path.read_text", side_effect=PermissionError("denied")):
+            with self.assertRaisesRegex(ResearcherError, "could not be read.*denied"):
+                Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
 
 
 if __name__ == "__main__":

@@ -9,46 +9,12 @@ from pathlib import Path
 from typing import Any
 
 from env_config import PROJECT_ENV_PATH, load_env_value
+from prompt_loader import PromptLoadError, load_prompt
 
 
 GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
-
-CURATION_PROMPT = """You are a curator for a daily techno production briefing.
-
-You will receive research items collected by the Researcher. Do not search the web. Do not add new items. Do not invent missing facts.
-
-Your job is to select and rank the strongest items for a techno producer interested in:
-- hypnotic, raw, minimal, deep, industrial, and Polegroup-adjacent techno
-- serious label and release news
-- useful hardware news for synths, drum machines, sequencers, Eurorack, and studio tools
-- notable artist news when it is musically relevant
-
-Reject:
-- festival lineup announcements
-- generic EDM news
-- weak promotional filler
-- duplicate or near-duplicate items
-- items with missing title, url, or summary
-
-Return ONLY JSON:
-
-[
-  {
-    "title": "original title",
-    "url": "original url",
-    "summary": "original summary",
-    "curation_reason": "why this item is worth including",
-    "rank": 1
-  }
-]
-
-Rules:
-- Use only the provided input items.
-- Preserve each selected item's original title, url, and summary.
-- Rank items from most relevant to least relevant.
-- Return at least 3 items if at least 3 strong items exist.
-- If fewer than 3 strong items exist, return only the strong items."""
+DEFAULT_PROMPT_PATH = Path(__file__).parent / "prompts" / "curators" / "polegroup_techno.md"
 
 
 class CuratorError(RuntimeError):
@@ -63,16 +29,22 @@ class Curator:
         model: str = GEMINI_MODEL,
         endpoint: str = GEMINI_ENDPOINT,
         env_path: str | Path = PROJECT_ENV_PATH,
+        prompt_path: str | Path = DEFAULT_PROMPT_PATH,
     ) -> None:
         self.model = model
         self.endpoint = endpoint.rstrip("/")
         self.env_path = Path(env_path)
+        self.prompt_path = Path(prompt_path)
 
     def run(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Curate and rank researcher items via Gemini and return the ranked list."""
+        try:
+            prompt_content = load_prompt(self.prompt_path)
+        except PromptLoadError as error:
+            raise CuratorError(str(error)) from error
         api_key = load_env_value("GEMINI_API_KEY", self.env_path)
 
-        prompt = f"{CURATION_PROMPT}\n\nResearch items:\n{json.dumps(items, indent=2)}"
+        prompt = f"{prompt_content}\n\nResearch items:\n{json.dumps(items, indent=2)}"
         payload = {
             "contents": [{"parts": [{"text": prompt}]}],
         }

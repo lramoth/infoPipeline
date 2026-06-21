@@ -82,3 +82,10 @@
 - Scenario 4, Incomplete item data: PASS — `Curator.validate()` iterates all five required fields (`title`, `url`, `summary`, `curation_reason`, `rank`) and returns `False` with a reason citing missing fields when any are absent or empty.
 - Scenario 5, Gemini API error: PASS — `Curator.run()` catches `urllib.error.URLError` and `json.JSONDecodeError` and raises `CuratorError`, reporting the failure to the caller.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-21
+
+- Spec used: `specs/prompt_loading_feature.md`.
+- Summary of work completed: Moved the Researcher and Curator prompts from Python source into `prompts/researchers/techno_news.md` and `prompts/curators/polegroup_techno.md`; added the blank `prompts/writers/telegram_brief.md` placeholder; added shared UTF-8 runtime prompt loading; made both implemented stages configurable with a prompt path; and added focused tests for configured prompt use plus missing and unreadable prompt failures. All 29 repository tests pass.
+- Assumptions made: Prompt files are UTF-8 text, are configured through an optional `prompt_path` constructor argument, and are read on each stage run so prompt edits take effect without restarting or modifying Python source.
+- Gaps or suspected bugs: None.
