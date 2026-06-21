@@ -1,7 +1,7 @@
-# Eval: <name>>
+# Eval: Eval Name
 
 Purpose
-Validate the observable behavior described in `<spec name>`.
+Validate the observable behavior described in `spec name`.
 
 Do not grade implementation details such as: 
 - class names
@@ -21,14 +21,14 @@ Unless explicitly required by the spec:
 - Use mocks, fixtures, or controlled test inputs.
 
 ## Scenario 1: <name>>
-Given <state>,
-When <event>>,
+Given,
+When,
 Then:
 - Add observables here
 
-## Scenario 1: <name>>
-Given <state>,
-When <event>>,
+## Scenario 2: <name>>
+Given,
+When,
 Then:
 - Add observables here
 

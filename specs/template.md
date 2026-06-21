@@ -1,4 +1,4 @@
-# Spec: <Feature Name>
+# Spec: Feature Name
 
 ## Objective
 
