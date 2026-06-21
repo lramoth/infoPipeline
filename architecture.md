@@ -60,6 +60,24 @@ pipeline at that stage rather than passing bad output forward.
 - **Ollama (local)** — Writer. 
 - .env contains GEMINI_API_KEY, TELEGRAM_BOT_TOKEN, and TELEGRAM_CHAT_ID
 
+## Ledger
+
+The output/ledger.json is a record of each stage's status, output and validation
+
+```json
+{
+  "date": "2026-06-20",
+  "stages": {
+    "<stage_name>": {
+      "status": "done" | "failed",
+      "output": "<whatever the stage returned>",
+      "validation_reason": "<why it passed or failed>",
+      "timestamp": "<ISO 8601>"
+    }
+  }
+}
+```
+
 ## Runtime
 
 - OpenClaw is the host/runtime, not a participant in the pipeline's logic.

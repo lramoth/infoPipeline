@@ -65,3 +65,10 @@
 - Scenario 2, required key missing: PASS — loading a required key absent from an existing `.env` file raises `EnvConfigError` to the caller.
 - Scenario 3, required value missing: PASS — required keys with unquoted or quoted empty values raise `EnvConfigError` to the caller.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-20
+
+- Spec used: `specs/curator_feature.md`.
+- Summary: Implemented `curator.py` with a `Curator` class that sends researcher items to Gemini via a plain `generateContent` call (no `google_search` tool), parses the JSON response into a ranked curated list, and exposes static validation. Validation checks that the output is a non-empty list, every item contains all five required fields (`title`, `url`, `summary`, `curation_reason`, `rank`), no duplicate URLs exist, and at least one item carries `rank=1`. API and parse failures surface as `CuratorError`. Added ten focused `unittest` tests in `test_curator.py`; all 24 repository tests pass.
+- Assumptions: `Curator.run(items)` takes the items list explicitly rather than reading the ledger directly; pipeline assembly will bind the researcher output via a closure when a main entry point is written. Defaulted to `gemini-2.5-flash` and the Gemini v1beta REST endpoint, consistent with the Researcher.
+- Gaps or suspected bugs: None.
