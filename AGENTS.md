@@ -35,6 +35,8 @@
 
 ## Eval log conventions
 `eval_log.md` is append-only.
+New entries must be written at the end of the file.
+Existing entries must never be reordered, modified, or inserted above.
 
 Build sessions append entries under:
 
