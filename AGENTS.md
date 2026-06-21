@@ -61,8 +61,10 @@ and must include:
 
 - eval file used
 - PASS/FAIL result for each scenario
+- one-sentence reason for each scenario result
 - overall verdict
 
 Build sessions must never write evaluation entries.
 
 Evaluation sessions must never write build-log entries.
+Evaluation reasons should describe observable behavior, not internal implementation details.

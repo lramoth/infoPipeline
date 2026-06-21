@@ -72,3 +72,13 @@
 - Summary: Implemented `curator.py` with a `Curator` class that sends researcher items to Gemini via a plain `generateContent` call (no `google_search` tool), parses the JSON response into a ranked curated list, and exposes static validation. Validation checks that the output is a non-empty list, every item contains all five required fields (`title`, `url`, `summary`, `curation_reason`, `rank`), no duplicate URLs exist, and at least one item carries `rank=1`. API and parse failures surface as `CuratorError`. Added ten focused `unittest` tests in `test_curator.py`; all 24 repository tests pass.
 - Assumptions: `Curator.run(items)` takes the items list explicitly rather than reading the ledger directly; pipeline assembly will bind the researcher output via a closure when a main entry point is written. Defaulted to `gemini-2.5-flash` and the Gemini v1beta REST endpoint, consistent with the Researcher.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-21
+
+- Eval file used: `evals/curator_feature.eval.md`.
+- Scenario 1, Valid curated items: PASS — `Curator.validate()` returns `True` when the list is non-empty, all five required fields are present on every item, no URLs are duplicated, and at least one item carries `rank=1`.
+- Scenario 2, Empty item list: PASS — `Curator.validate([])` returns `False` with a reason citing no items.
+- Scenario 3, Duplicate URLs: PASS — `Curator.validate()` detects when `len(urls) != len(set(urls))` and returns `False` with a reason citing duplicate URLs.
+- Scenario 4, Incomplete item data: PASS — `Curator.validate()` iterates all five required fields (`title`, `url`, `summary`, `curation_reason`, `rank`) and returns `False` with a reason citing missing fields when any are absent or empty.
+- Scenario 5, Gemini API error: PASS — `Curator.run()` catches `urllib.error.URLError` and `json.JSONDecodeError` and raises `CuratorError`, reporting the failure to the caller.
+- Overall verdict: PASS.
