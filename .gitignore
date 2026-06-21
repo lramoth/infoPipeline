@@ -10,3 +10,6 @@ output/
 
 # secrets
 .env
+
+# 
+.claude/
