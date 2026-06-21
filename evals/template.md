@@ -20,13 +20,13 @@ Unless explicitly required by the spec:
 - Do not send emails, messages, or notifications.
 - Use mocks, fixtures, or controlled test inputs.
 
-## Scenario 1: <name>>
+## Scenario 1: Name
 Given,
 When,
 Then:
 - Add observables here
 
-## Scenario 2: <name>>
+## Scenario 2: Name
 Given,
 When,
 Then:
