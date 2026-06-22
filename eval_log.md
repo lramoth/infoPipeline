@@ -97,3 +97,10 @@
 - Scenario 2, Alternate prompt file: PASS — each implemented stage uses the contents of its configured markdown file in the outgoing stage prompt under controlled inputs.
 - Scenario 3, Default prompt files exist: PASS — all three required Researcher, Curator, and Writer markdown prompt paths exist in the repository.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-21
+
+- Spec used: `specs/writer_feature.md`.
+- Summary of work completed: Implemented `writer.py` with a `Writer` class that accepts a list of Curator items, loads a configurable prompt from `prompts/writers/telegram_brief.md` by default, sends the prompt and items to a local Ollama endpoint, and returns the generated Telegram message as a string. Raises `WriterError` for empty input, missing or empty prompt file, model execution failures, and empty model responses. Added a `validate` static method that checks the output is a string, each Curator item's title and URL appear in the message with non-empty summary text between them, and items appear in ascending rank order. Added 14 focused `unittest` tests in `test_writer.py`; all 43 repository tests pass.
+- Assumptions made: Ollama API uses the `/api/generate` endpoint with `{"model", "prompt", "stream": false}` request body and a `{"response": ...}` response shape. Prompt and curator items are combined as `"{prompt}\n\nCurated items:\n{json.dumps(items, indent=2)}"`. Summary text is validated as any non-whitespace content between a item's title and URL occurrences, excluding the literal "Source:" label specified in the prompt's output format. Rank order is verified by comparing the first-occurrence positions of each item's URL in the output, sorted by ascending rank. Unlike `Researcher.validate` and `Curator.validate`, `Writer.validate` takes both the output string and the curator items list because per-item title, URL, and order correctness cannot be checked without them.
+- Gaps or suspected bugs: None.
