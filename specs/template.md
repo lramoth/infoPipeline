@@ -85,3 +85,6 @@ Conditions that must fail.
 ## Out of Scope
 
 Explicitly excluded work.
+
+## Completion
+When implementation is complete, append a build log entry to eval_log.md following the format in AGENTS.md
