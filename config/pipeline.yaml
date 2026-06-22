@@ -1,0 +1,17 @@
+stages:
+  - name: researcher
+    prompt_path: prompts/researchers/techno_news.md
+    model:
+      provider: gemini
+      name: gemini-2.5-flash
+  - name: curator
+    prompt_path: prompts/curators/polegroup_techno.md
+    model:
+      provider: gemini
+      name: gemini-2.5-flash
+  - name: writer
+    prompt_path: prompts/writers/telegram_brief.md
+    model:
+      provider: ollama
+      name: gemma4:e4b
+      endpoint: http://localhost:11434/api/generate

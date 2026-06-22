@@ -115,3 +115,10 @@
 - Scenario 5, Ordering Error: PASS — validate returns failure when items' URL positions in the message do not follow the ascending rank order of the curated items.
 - Scenario 6, Successful message structure: PASS — with valid curated items and a valid prompt the Writer returns a non-empty string, and validate confirms each item's title and URL are present with summary text and that all items appear in ascending rank order.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-22
+
+- Spec used: `specs/pipeline_config_feature.md`.
+- Summary of work completed: Added the default `config/pipeline.yaml` with Researcher, Curator, and Writer in the required order; added runtime loading that validates the configuration and configured prompt files, preserves stage order, applies configured model names and endpoints, and assembles stage instances without executing them; added focused tests for every specified success and failure condition.
+- Assumptions made: Stage and model field names are case-sensitive. Prompt paths are project-root-relative. Because every currently known stage is prompt-driven, each known stage requires `prompt_path`. An optional model object requires non-empty `provider` and `name` values, while its optional endpoint is passed to the corresponding stage constructor. Added PyYAML because standards-compliant YAML parsing and malformed-document reporting would otherwise require reimplementing substantial established functionality.
+- Gaps or suspected bugs: None.
