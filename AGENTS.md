@@ -65,6 +65,7 @@ and must include:
 - overall verdict
 
 Build sessions must never write evaluation entries.
+Build summaries should describe completed behavior, not internal implementation details.
 
 Evaluation sessions must never write build-log entries.
 Evaluation reasons should describe observable behavior, not internal implementation details.
