@@ -10,6 +10,14 @@
 - Delivery stage posts to Telegram.
 - Runs under the OpenClaw agent runtime.
 
+## Dependencies
+External dependencies may be added when they provide significant value and avoid reimplementing established functionality.
+When adding a dependency:
+- add it to requirements.txt
+- justify it in the build log assumptions
+- do not introduce unnecessary dependencies
+Well-established third-party libraries may be added when implementing the feature correctly would otherwise require reimplementing substantial functionality.
+
 ## Workflow
 - Your only source of requirements is the spec file referenced in the prompt.
 - If a requirement is ambiguous or missing, log it under "Open questions"
@@ -31,7 +39,6 @@
   edge-case tests for unstated behavior.
 - Append a `## Build log — YYYY-MM-DD` entry to eval_log.md: what you built (or
   documented), the spec used, any assumptions, gaps, or suspected bugs.
-
 
 ## Eval log conventions
 `eval_log.md` is append-only.
