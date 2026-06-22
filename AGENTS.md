@@ -51,6 +51,10 @@ and must include:
 - assumptions made
 - gaps or suspected bugs
 
+The summary of work completed must describe externally observable behavior and completed capabilities, not internal implementation details.
+
+Implementation details may be included only under `Assumptions made`, `Gaps or suspected bugs`, or when required to explain a public contract decision.
+
 Evaluation sessions append entries under:
 
 ```markdown
@@ -64,8 +68,7 @@ and must include:
 - one-sentence reason for each scenario result
 - overall verdict
 
-Build sessions must never write evaluation entries.
-Build summaries should describe completed behavior, not internal implementation details.
-
-Evaluation sessions must never write build-log entries.
 Evaluation reasons should describe observable behavior, not internal implementation details.
+
+Build sessions must never write evaluation entries.
+Evaluation sessions must never write build-log entries.
