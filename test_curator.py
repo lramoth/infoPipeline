@@ -180,6 +180,47 @@ class CuratorTests(unittest.TestCase):
 
         self.assertFalse(passed)
         self.assertIn("duplicate", reason)
+        self.assertIn(shared_url, reason)
+        self.assertIn("rank 1", reason)
+        self.assertIn("rank 2", reason)
+        self.assertIn("Item 1", reason)
+        self.assertIn("Item 2", reason)
+
+    def test_validation_allows_same_domain_with_distinct_complete_urls(self):
+        output = [
+            make_curated_item(1, url="https://example.com/releases/alpha"),
+            make_curated_item(2, url="https://example.com/releases/beta"),
+        ]
+
+        passed, reason = Curator.validate(output)
+
+        self.assertTrue(passed, reason)
+
+    def test_validation_allows_same_path_prefix_with_distinct_complete_urls(self):
+        output = [
+            make_curated_item(1, url="https://news.example.com/items/source?id=alpha"),
+            make_curated_item(2, url="https://news.example.com/items/source?id=beta"),
+        ]
+
+        passed, reason = Curator.validate(output)
+
+        self.assertTrue(passed, reason)
+
+    def test_validation_allows_distinct_gemini_grounding_redirect_urls(self):
+        output = [
+            make_curated_item(
+                1,
+                url="https://vertexaisearch.cloud.google.com/grounding-api-redirect/AWQVqAKLongTokenOne",
+            ),
+            make_curated_item(
+                2,
+                url="https://vertexaisearch.cloud.google.com/grounding-api-redirect/AWQVqAKLongTokenTwo",
+            ),
+        ]
+
+        passed, reason = Curator.validate(output)
+
+        self.assertTrue(passed, reason)
 
     def test_validation_fails_when_no_item_has_rank_one(self):
         output = [{**make_curated_item(1), "rank": 2}]

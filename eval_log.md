@@ -204,3 +204,10 @@
 - Scenario 9, Extracted Data Fails Existing Validation: PASS — each stage's validate() returns False with a readable reason when extracted data violates existing rules (item count, required fields, duplicate URLs, missing rank 1), and the Planner records the stage as failed and does not run later stages.
 - Scenario 10, Existing Planner Behavior: PASS — when a wrapped but valid structured response passes stage validation, the Planner records the stage as done and continues to the next stage; ordering and failure-handling behavior are unchanged.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-23
+
+- Spec used: `specs/url_validation_fix.md`.
+- Summary of work completed: Curator validation now accepts curated items whose URLs share a domain, path prefix, Gemini grounding redirect shape, or other visual similarity as long as each complete URL value is distinct. Curator validation still fails when two or more curated items contain the same complete URL value, and the failure reason reports the duplicate URL plus the affected item ranks and titles. Added focused tests for distinct same-domain URLs, distinct same-prefix URLs, distinct Gemini grounding redirect URLs, and exact duplicate URL diagnostics.
+- Assumptions made: URL uniqueness is an exact Python value comparison of the `url` field after required-field validation; no URL normalization, canonicalization, redirect resolution, preview truncation, or network lookup is performed. No new dependencies were added.
+- Gaps or suspected bugs: None.

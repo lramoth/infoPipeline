@@ -122,9 +122,21 @@ class Curator:
             ):
                 return False, f"Curated item {index} is missing title, url, summary, curation_reason, or rank"
 
-        urls = [item["url"] for item in output]
-        if len(urls) != len(set(urls)):
-            return False, "Curator output contains duplicate URLs"
+        items_by_url: dict[Any, list[dict[str, Any]]] = {}
+        for item in output:
+            items_by_url.setdefault(item["url"], []).append(item)
+
+        duplicate_groups = [
+            (url, items) for url, items in items_by_url.items() if len(items) > 1
+        ]
+        if duplicate_groups:
+            duplicate_details = []
+            for url, items in duplicate_groups:
+                item_details = ", ".join(
+                    f"rank {item['rank']} title {item['title']!r}" for item in items
+                )
+                duplicate_details.append(f"url {url!r}: {item_details}")
+            return False, "Curator output contains duplicate URLs: " + "; ".join(duplicate_details)
 
         if not any(item["rank"] == 1 for item in output):
             return False, "No item has rank 1"
