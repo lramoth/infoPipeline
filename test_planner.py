@@ -1,11 +1,13 @@
 import json
 import tempfile
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 from datetime import date, datetime, timedelta
+from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
-from planner import Planner, Stage
+from planner import Planner, RunResult, Stage, main
 
 
 class PlannerTests(unittest.TestCase):
@@ -242,6 +244,45 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(entry["status"], "failed")
         self.assertEqual(entry["output"], [1, 2])
         self.assertIn("cannot validate", entry["validation_reason"])
+
+    def test_cli_prints_final_output_and_exits_zero_on_success(self):
+        stdout = StringIO()
+        stderr = StringIO()
+        with patch.object(
+            Planner,
+            "run",
+            return_value=RunResult(True, "final message"),
+        ), redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stdout.getvalue(), "final message\n")
+        self.assertEqual(stderr.getvalue(), "")
+
+    def test_cli_prints_readable_error_and_exits_nonzero_on_run_failure(self):
+        stdout = StringIO()
+        stderr = StringIO()
+        with patch.object(
+            Planner,
+            "run",
+            return_value=RunResult(False, failed_stage="writer", reason="bad format"),
+        ), redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("Pipeline failed at writer: bad format", stderr.getvalue())
+
+    def test_cli_prints_readable_error_and_exits_nonzero_on_startup_error(self):
+        stdout = StringIO()
+        stderr = StringIO()
+        with patch("planner.Planner", side_effect=RuntimeError("missing config")), \
+            redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "")
+        self.assertIn("Pipeline failed: RuntimeError: missing config", stderr.getvalue())
 
 
 if __name__ == "__main__":

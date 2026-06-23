@@ -149,3 +149,10 @@
 - Scenario 4, Stage error: PASS — a thrown stage error is reported readably, recorded as failed, and halts subsequent stages.
 - Scenario 5, Final stage: PASS — when the final stage output is valid, the planner reports that final output to the caller.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-23
+
+- Spec used: `specs/CLI_execution_feature.md`.
+- Summary of work completed: `python3 planner.py` now starts one run of the default configured pipeline, prints the final pipeline output on success, exits with status code 0 on success, and prints a readable failure message with a nonzero exit code when pipeline startup or execution fails.
+- Assumptions made: Non-string final outputs should be printed as pretty JSON when possible and with `str()` as a fallback, while failure messages are printed to standard error.
+- Gaps or suspected bugs: None.

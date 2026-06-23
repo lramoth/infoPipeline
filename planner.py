@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import inspect
+import sys
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -143,3 +144,34 @@ class Planner:
         ):
             return True
         return len(positional_parameters) >= count
+
+
+def _format_cli_output(output: Any) -> str:
+    if isinstance(output, str):
+        return output
+    try:
+        return json.dumps(output, indent=2)
+    except TypeError:
+        return str(output)
+
+
+def main() -> int:
+    """Run the default configured pipeline once from the command line."""
+    try:
+        result = Planner().run()
+    except Exception as error:
+        print(f"Pipeline failed: {type(error).__name__}: {error}", file=sys.stderr)
+        return 1
+
+    if result.succeeded:
+        print(_format_cli_output(result.output))
+        return 0
+
+    failed_stage = result.failed_stage or "unknown stage"
+    reason = result.reason or "no failure reason provided"
+    print(f"Pipeline failed at {failed_stage}: {reason}", file=sys.stderr)
+    return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
