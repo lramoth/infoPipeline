@@ -108,7 +108,7 @@ class Curator:
 
     @staticmethod
     def validate(output: Any) -> tuple[bool, str]:
-        """Validate item count, required fields, URL uniqueness, and that rank 1 exists."""
+        """Validate item count, required fields, and that rank 1 exists."""
         if not isinstance(output, list):
             return False, "Curator output is not a list"
 
@@ -122,23 +122,7 @@ class Curator:
             ):
                 return False, f"Curated item {index} is missing title, url, summary, curation_reason, or rank"
 
-        items_by_url: dict[Any, list[dict[str, Any]]] = {}
-        for item in output:
-            items_by_url.setdefault(item["url"], []).append(item)
-
-        duplicate_groups = [
-            (url, items) for url, items in items_by_url.items() if len(items) > 1
-        ]
-        if duplicate_groups:
-            duplicate_details = []
-            for url, items in duplicate_groups:
-                item_details = ", ".join(
-                    f"rank {item['rank']} title {item['title']!r}" for item in items
-                )
-                duplicate_details.append(f"url {url!r}: {item_details}")
-            return False, "Curator output contains duplicate URLs: " + "; ".join(duplicate_details)
-
         if not any(item["rank"] == 1 for item in output):
             return False, "No item has rank 1"
 
-        return True, "At least one curated item with all required fields and no duplicate URLs"
+        return True, "At least one curated item with all required fields and rank 1"

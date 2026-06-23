@@ -224,3 +224,10 @@
 - Scenario 7, Existing Required Fields Validation: PASS — items missing any of `title`, `url`, `summary`, `curation_reason`, or `rank` continue to fail validation with a reason citing missing fields.
 - Scenario 8, Existing Rank Validation: PASS — items that satisfy all required fields and have no duplicate URLs but lack a `rank=1` entry continue to fail validation with a reason citing the missing rank.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-23
+
+- Spec used: `specs/shared_url_fix.md`.
+- Summary of work completed: Curator validation now accepts multiple complete curated items that cite the same URL, while still requiring every item to provide a non-empty title, URL, summary, curation reason, and rank, and still requiring at least one rank 1 item. Curator output preserves each item URL exactly as provided and does not drop items because a URL appears more than once.
+- Assumptions made: Shared URLs are valid citations even when the URL values are exactly identical; no URL normalization, canonicalization, redirect resolution, network lookup, or item-identity deduplication is performed. No new dependencies were added.
+- Gaps or suspected bugs: None.

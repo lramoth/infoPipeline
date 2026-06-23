@@ -169,7 +169,7 @@ class CuratorTests(unittest.TestCase):
         self.assertFalse(passed)
         self.assertIn("missing", reason)
 
-    def test_validation_fails_for_duplicate_urls(self):
+    def test_validation_succeeds_for_multiple_complete_items_sharing_same_url(self):
         shared_url = "https://example.com/same"
         output = [
             make_curated_item(1, url=shared_url),
@@ -178,13 +178,30 @@ class CuratorTests(unittest.TestCase):
 
         passed, reason = Curator.validate(output)
 
+        self.assertTrue(passed, reason)
+
+    def test_validation_fails_when_item_is_missing_url(self):
+        output = [
+            {
+                "title": "A",
+                "summary": "A summary",
+                "curation_reason": "Good reason",
+                "rank": 1,
+            }
+        ]
+
+        passed, reason = Curator.validate(output)
+
         self.assertFalse(passed)
-        self.assertIn("duplicate", reason)
-        self.assertIn(shared_url, reason)
-        self.assertIn("rank 1", reason)
-        self.assertIn("rank 2", reason)
-        self.assertIn("Item 1", reason)
-        self.assertIn("Item 2", reason)
+        self.assertIn("missing", reason)
+
+    def test_validation_fails_when_item_has_empty_url(self):
+        output = [{**make_curated_item(1), "url": ""}]
+
+        passed, reason = Curator.validate(output)
+
+        self.assertFalse(passed)
+        self.assertIn("missing", reason)
 
     def test_validation_allows_same_domain_with_distinct_complete_urls(self):
         output = [
