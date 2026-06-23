@@ -1,7 +1,7 @@
 # Eval: Planner Integratoin
 
 Purpose
-Validate the observable behavior described in `specs/planner_integration_feature`.
+Validate the observable behavior described in `specs/planner_integration_feature.md`.
 
 Do not grade implementation details such as: 
 - class names
