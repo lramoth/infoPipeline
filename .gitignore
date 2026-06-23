@@ -5,7 +5,6 @@
 .vscode/
 
 # project output
-ledger.json
 output/
 
 # secrets

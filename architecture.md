@@ -72,7 +72,8 @@ The output/ledger.json is a record of each stage's status, output and validation
       "status": "done" | "failed",
       "output": "<whatever the stage returned>",
       "validation_reason": "<why it passed or failed>",
-      "timestamp": "<ISO 8601>"
+      "timestamp": "<ISO 8601>",
+      "diagnostic_path": "<Failure responses returned by external services>"
     }
   }
 }
