@@ -92,3 +92,7 @@ Bad:
 
 Build sessions must never write evaluation entries.
 Evaluation sessions must never write build-log entries.
+
+## Governance
+Read `governance.md` before drafting specifications, evaluations, or eval-log entries.
+This project treats specs and evals as black-box behavioral artifacts: describe observable behavior, not implementation details.
