@@ -132,3 +132,10 @@
 - Scenario 4, Missing required stage fields: PASS — loading a stage missing `name` or a prompt-driven stage missing `prompt_path` raises `PipelineConfigError` with a readable message.
 - Scenario 5, Invalid stage or prompt path: PASS — loading an unknown stage name or a nonexistent configured prompt path raises `PipelineConfigError` with a readable message.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-23
+
+- Spec used: `specs/planner_integration_feature.md`.
+- Summary of work completed: The Planner now loads the default configured pipeline when no stage list is supplied, executes configured stages in order, passes each successful stage output into the next stage, validates each output before continuing, writes the ledger after every stage result, stops on stage errors or validation failures, reports the failed stage and reason, and returns the final stage output after a fully successful run. The Curator now accepts the Researcher output envelope produced by the integrated pipeline while retaining direct item-list input support. Added focused integration tests; all 56 repository tests pass.
+- Assumptions made: Existing explicit `Stage` objects remain supported for tests and direct callers; configured stage names are derived from their class names in lowercase because assembled Researcher, Curator, and Writer instances do not expose a `name` attribute. Writer validation receives both its output and the curated items it was given, matching the existing Writer validation contract.
+- Gaps or suspected bugs: None.

@@ -36,8 +36,11 @@ class Curator:
         self.env_path = Path(env_path)
         self.prompt_path = Path(prompt_path)
 
-    def run(self, items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def run(self, items: list[dict[str, Any]] | dict[str, Any]) -> list[dict[str, Any]]:
         """Curate and rank researcher items via Gemini and return the ranked list."""
+        if isinstance(items, dict) and isinstance(items.get("items"), list):
+            items = items["items"]
+
         try:
             prompt_content = load_prompt(self.prompt_path)
         except PromptLoadError as error:

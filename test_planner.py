@@ -3,6 +3,7 @@ import tempfile
 import unittest
 from datetime import date, datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 from planner import Planner, Stage
 
@@ -56,10 +57,82 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(ledger["stages"]["first"]["status"], "done")
         self.assertEqual(ledger["stages"]["second"]["status"], "done")
         self.assertEqual(ledger["stages"]["first"]["output"], {"item": 1})
+        self.assertEqual(result.output, "second output")
         self.assertEqual(
             ledger["stages"]["first"]["validation_reason"], "first passed"
         )
         datetime.fromisoformat(ledger["stages"]["first"]["timestamp"])
+
+    def test_passes_each_successful_stage_output_to_the_next_stage(self):
+        events = []
+
+        def first_run():
+            events.append(("first input", None))
+            return {"items": [1, 2, 3]}
+
+        def second_run(previous_output):
+            events.append(("second input", previous_output))
+            return {"curated": previous_output["items"]}
+
+        def third_run(previous_output):
+            events.append(("third input", previous_output))
+            return "final message"
+
+        result = Planner(
+            [
+                Stage("researcher", first_run, lambda output: (True, "research passed")),
+                Stage("curator", second_run, lambda output: (True, "curation passed")),
+                Stage("writer", third_run, lambda output: (True, "writer passed")),
+            ],
+            self.ledger_path,
+        ).run()
+
+        self.assertTrue(result.succeeded)
+        self.assertEqual(result.output, "final message")
+        self.assertEqual(
+            events,
+            [
+                ("first input", None),
+                ("second input", {"items": [1, 2, 3]}),
+                ("third input", {"curated": [1, 2, 3]}),
+            ],
+        )
+
+    def test_validation_can_use_the_input_given_to_the_current_stage(self):
+        validator_seen_input = None
+
+        def validate(output, stage_input):
+            nonlocal validator_seen_input
+            validator_seen_input = stage_input
+            return True, "writer saw curated items"
+
+        result = Planner(
+            [
+                Stage("curator", lambda: [{"rank": 1}], lambda output: (True, "passed")),
+                Stage("writer", lambda items: "message", validate),
+            ],
+            self.ledger_path,
+        ).run()
+
+        self.assertTrue(result.succeeded)
+        self.assertEqual(validator_seen_input, [{"rank": 1}])
+
+    def test_loads_default_stages_from_pipeline_config_when_stages_are_not_given(self):
+        configured_stages = [
+            Stage("researcher", lambda: "research output", lambda output: (True, "research passed")),
+            Stage("writer", lambda output: "final output", lambda output: (True, "writer passed")),
+        ]
+
+        with patch("planner.load_pipeline", return_value=configured_stages) as load_pipeline:
+            result = Planner(ledger_path=self.ledger_path).run()
+
+        load_pipeline.assert_called_once_with()
+        self.assertTrue(result.succeeded)
+        self.assertEqual(result.output, "final output")
+        self.assertEqual(
+            list(self.read_ledger()["stages"]),
+            ["researcher", "writer"],
+        )
 
     def test_invalid_stage_is_reported_and_halts_remaining_stages(self):
         ran_last_stage = False
