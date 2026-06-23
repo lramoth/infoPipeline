@@ -189,3 +189,18 @@
 - Summary of work completed: Researcher and Curator now accept valid structured item lists returned directly, inside Markdown code fences, or surrounded by explanatory text, while still rejecting model responses that contain no usable structured payload or only malformed structured data. Existing validation remains responsible for item counts, required fields, duplicate URL checks, and ranking checks after extraction.
 - Assumptions made: The structured payload expected from Gemini for both currently scoped stages is a top-level JSON list, matching the existing Researcher item parsing and Curator curated-list parsing contracts. No new dependencies were added.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-23
+
+- Eval file used: `evals/model_response_tolerance_feature.eval.md`.
+- Scenario 1, Direct Researcher Structured Response: PASS — Researcher.run() with a bare JSON model response succeeds, returns the items unchanged, and Researcher.validate() accepts the output.
+- Scenario 2, Markdown-Wrapped Researcher Structured Response: PASS — Researcher.run() with a ```json…``` fenced model response extracts and returns the items unchanged, and Researcher.validate() accepts the output.
+- Scenario 3, Explanatory Researcher Structured Response: PASS — Researcher.run() with text surrounding the JSON payload extracts and returns the items unchanged, and Researcher.validate() accepts the output.
+- Scenario 4, Direct Curator Structured Response: PASS — Curator.run() with a bare JSON model response succeeds and returns the curated items unchanged.
+- Scenario 5, Markdown-Wrapped Curator Structured Response: PASS — Curator.run() with a ```json…``` fenced model response extracts and returns the curated items unchanged, and Curator.validate() accepts the output.
+- Scenario 6, Explanatory Curator Structured Response: PASS — Curator.run() with surrounding text extracts and returns the curated items unchanged, and Curator.validate() accepts the output.
+- Scenario 7, No Valid Structured Data: PASS — both Researcher.run() and Curator.run() raise a stage error with a readable failure message when the model response contains only human-readable text and no structured payload.
+- Scenario 8, Malformed Structured Data: PASS — both Researcher.run() and Curator.run() raise a stage error with a readable failure message when the model response contains truncated or syntactically invalid JSON.
+- Scenario 9, Extracted Data Fails Existing Validation: PASS — each stage's validate() returns False with a readable reason when extracted data violates existing rules (item count, required fields, duplicate URLs, missing rank 1), and the Planner records the stage as failed and does not run later stages.
+- Scenario 10, Existing Planner Behavior: PASS — when a wrapped but valid structured response passes stage validation, the Planner records the stage as done and continues to the next stage; ordering and failure-handling behavior are unchanged.
+- Overall verdict: PASS.
