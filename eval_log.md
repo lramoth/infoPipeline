@@ -182,3 +182,10 @@
 - Scenario 5, Successful stage: PASS — a successfully validated stage writes no diagnostic file, the ledger entry carries no `diagnostic_path` key, and the diagnostics directory is not created.
 - Scenario 6, Diagnostic preservation fails: PASS — when `write_diagnostic` raises an exception the original pipeline failure result, failed stage name, failure reason, and ledger status are all preserved unchanged.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-23
+
+- Spec used: `specs/model_response_tolerance_feature.md`.
+- Summary of work completed: Researcher and Curator now accept valid structured item lists returned directly, inside Markdown code fences, or surrounded by explanatory text, while still rejecting model responses that contain no usable structured payload or only malformed structured data. Existing validation remains responsible for item counts, required fields, duplicate URL checks, and ranking checks after extraction.
+- Assumptions made: The structured payload expected from Gemini for both currently scoped stages is a top-level JSON list, matching the existing Researcher item parsing and Curator curated-list parsing contracts. No new dependencies were added.
+- Gaps or suspected bugs: None.

@@ -30,9 +30,13 @@ def make_curated_item(rank: int, url: str | None = None) -> dict:
 
 
 def make_api_response(curated_items: list) -> bytes:
+    return make_api_text_response(json.dumps(curated_items))
+
+
+def make_api_text_response(model_text: str) -> bytes:
     response = {
         "candidates": [
-            {"content": {"parts": [{"text": json.dumps(curated_items)}]}}
+            {"content": {"parts": [{"text": model_text}]}}
         ]
     }
     return json.dumps(response).encode("utf-8")
@@ -70,6 +74,50 @@ class CuratorTests(unittest.TestCase):
         self.assertIn(json.dumps(input_items, indent=2), prompt_text)
         self.assertNotIn("tools", request_body)
         self.assertEqual(output, curated)
+
+    def test_accepts_curated_items_wrapped_in_markdown_code_fence(self):
+        curated = [make_curated_item(1), make_curated_item(2)]
+        model_text = f"```json\n{json.dumps(curated)}\n```"
+
+        with patch(
+            "curator.urllib.request.urlopen",
+            return_value=FakeResponse(make_api_text_response(model_text)),
+        ):
+            output = Curator(env_path=self.env_path, prompt_path=self.prompt_path).run([])
+
+        self.assertEqual(output, curated)
+        passed, reason = Curator.validate(output)
+        self.assertTrue(passed, reason)
+
+    def test_accepts_curated_items_surrounded_by_explanatory_text(self):
+        curated = [make_curated_item(1), make_curated_item(2)]
+        model_text = f"Curated list follows:\n{json.dumps(curated)}\nThese are ranked."
+
+        with patch(
+            "curator.urllib.request.urlopen",
+            return_value=FakeResponse(make_api_text_response(model_text)),
+        ):
+            output = Curator(env_path=self.env_path, prompt_path=self.prompt_path).run([])
+
+        self.assertEqual(output, curated)
+        passed, reason = Curator.validate(output)
+        self.assertTrue(passed, reason)
+
+    def test_rejects_curator_response_without_valid_structured_data(self):
+        with patch(
+            "curator.urllib.request.urlopen",
+            return_value=FakeResponse(make_api_text_response("A ranked list would go here.")),
+        ):
+            with self.assertRaisesRegex(CuratorError, "Invalid Gemini API curation response"):
+                Curator(env_path=self.env_path, prompt_path=self.prompt_path).run([])
+
+    def test_rejects_malformed_curator_structured_data(self):
+        with patch(
+            "curator.urllib.request.urlopen",
+            return_value=FakeResponse(make_api_text_response('[{"title": "A"')),
+        ):
+            with self.assertRaisesRegex(CuratorError, "Invalid Gemini API curation response"):
+                Curator(env_path=self.env_path, prompt_path=self.prompt_path).run([])
 
     def test_validation_succeeds_for_one_complete_curated_item(self):
         output = [make_curated_item(1)]

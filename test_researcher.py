@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import io
 import json
 import tempfile
@@ -15,6 +17,13 @@ class FakeResponse(io.BytesIO):
 
     def __exit__(self, *args):
         self.close()
+
+
+def make_api_response(model_text: str, grounding_metadata: dict | None = None) -> bytes:
+    candidate = {"content": {"parts": [{"text": model_text}]}}
+    if grounding_metadata is not None:
+        candidate["groundingMetadata"] = grounding_metadata
+    return json.dumps({"candidates": [candidate]}).encode("utf-8")
 
 
 class ResearcherTests(unittest.TestCase):
@@ -58,6 +67,56 @@ class ResearcherTests(unittest.TestCase):
         self.assertEqual(request_body["tools"], [{"google_search": {}}])
         self.assertEqual(output["items"], items)
         self.assertEqual(output["grounding_metadata"], grounding_metadata)
+
+    def test_accepts_research_items_wrapped_in_markdown_code_fence(self):
+        items = [
+            {"title": f"Item {number}", "url": f"https://example.com/{number}", "summary": "News."}
+            for number in range(3)
+        ]
+        model_text = f"```json\n{json.dumps(items)}\n```"
+
+        with patch(
+            "researcher.urllib.request.urlopen",
+            return_value=FakeResponse(make_api_response(model_text)),
+        ):
+            output = Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
+
+        self.assertEqual(output["items"], items)
+        passed, reason = Researcher.validate(output)
+        self.assertTrue(passed, reason)
+
+    def test_accepts_research_items_surrounded_by_explanatory_text(self):
+        items = [
+            {"title": f"Item {number}", "url": f"https://example.com/{number}", "summary": "News."}
+            for number in range(3)
+        ]
+        model_text = f"Here are the results:\n{json.dumps(items)}\nHope this helps."
+
+        with patch(
+            "researcher.urllib.request.urlopen",
+            return_value=FakeResponse(make_api_response(model_text)),
+        ):
+            output = Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
+
+        self.assertEqual(output["items"], items)
+        passed, reason = Researcher.validate(output)
+        self.assertTrue(passed, reason)
+
+    def test_rejects_research_response_without_valid_structured_data(self):
+        with patch(
+            "researcher.urllib.request.urlopen",
+            return_value=FakeResponse(make_api_response("Here are three useful articles.")),
+        ):
+            with self.assertRaisesRegex(ResearcherError, "Invalid Gemini API search response"):
+                Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
+
+    def test_rejects_malformed_research_structured_data(self):
+        with patch(
+            "researcher.urllib.request.urlopen",
+            return_value=FakeResponse(make_api_response('[{"title": "A"')),
+        ):
+            with self.assertRaisesRegex(ResearcherError, "Invalid Gemini API search response"):
+                Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
 
     def test_validation_succeeds_for_at_least_three_complete_items(self):
         output = {

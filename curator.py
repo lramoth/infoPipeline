@@ -11,6 +11,7 @@ from typing import Any
 from env_config import PROJECT_ENV_PATH, load_env_value
 from diagnostics import DiagnosticError, external_http_context
 from prompt_loader import PromptLoadError, load_prompt
+from structured_output import StructuredOutputError, extract_json_payload
 
 
 GEMINI_MODEL = "gemini-2.5-flash"
@@ -88,8 +89,8 @@ class Curator:
             response_text = "".join(
                 part.get("text", "") for part in candidate["content"]["parts"]
             )
-            curated_items = json.loads(response_text)
-        except (KeyError, IndexError, TypeError, json.JSONDecodeError) as error:
+            curated_items = extract_json_payload(response_text, list)
+        except (KeyError, IndexError, TypeError, StructuredOutputError) as error:
             raise CuratorError(
                 f"Invalid Gemini API curation response: {error}",
                 {
