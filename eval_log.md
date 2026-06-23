@@ -122,3 +122,13 @@
 - Summary of work completed: Added the default `config/pipeline.yaml` with Researcher, Curator, and Writer in the required order; added runtime loading that validates the configuration and configured prompt files, preserves stage order, applies configured model names and endpoints, and assembles stage instances without executing them; added focused tests for every specified success and failure condition.
 - Assumptions made: Stage and model field names are case-sensitive. Prompt paths are project-root-relative. Because every currently known stage is prompt-driven, each known stage requires `prompt_path`. An optional model object requires non-empty `provider` and `name` values, while its optional endpoint is passed to the corresponding stage constructor. Added PyYAML because standards-compliant YAML parsing and malformed-document reporting would otherwise require reimplementing substantial established functionality.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-23
+
+- Eval file used: `evals/pipeline_config_feature.eval.md`.
+- Scenario 1, Config Exists: PASS — `config/pipeline.yaml` exists in the repository.
+- Scenario 2, Valid config: PASS — the default configuration loads as YAML, assembles Researcher, Curator, and Writer in YAML order, and each assembled stage has a name-defined type plus an existing configured prompt path.
+- Scenario 3, Missing or malformed config: PASS — loading a missing config or malformed YAML raises `PipelineConfigError` with a readable message.
+- Scenario 4, Missing required stage fields: PASS — loading a stage missing `name` or a prompt-driven stage missing `prompt_path` raises `PipelineConfigError` with a readable message.
+- Scenario 5, Invalid stage or prompt path: PASS — loading an unknown stage name or a nonexistent configured prompt path raises `PipelineConfigError` with a readable message.
+- Overall verdict: PASS.
