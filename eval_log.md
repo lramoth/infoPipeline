@@ -211,3 +211,16 @@
 - Summary of work completed: Curator validation now accepts curated items whose URLs share a domain, path prefix, Gemini grounding redirect shape, or other visual similarity as long as each complete URL value is distinct. Curator validation still fails when two or more curated items contain the same complete URL value, and the failure reason reports the duplicate URL plus the affected item ranks and titles. Added focused tests for distinct same-domain URLs, distinct same-prefix URLs, distinct Gemini grounding redirect URLs, and exact duplicate URL diagnostics.
 - Assumptions made: URL uniqueness is an exact Python value comparison of the `url` field after required-field validation; no URL normalization, canonicalization, redirect resolution, preview truncation, or network lookup is performed. No new dependencies were added.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-23
+
+- Eval file used: `evals/url_validation_fix.eval.md`.
+- Scenario 1, Distinct Complete URLs: PASS — `Curator.validate()` returns `True` when every item URL is distinct; no false positive is raised.
+- Scenario 2, Same Domain, Different URLs: PASS — items sharing `example.com` but with different full URL values pass validation; the shared domain alone does not cause failure.
+- Scenario 3, Same Path Prefix, Different URLs: PASS — items sharing `https://news.example.com/items/source` as a prefix but differing by query string pass validation; the shared prefix alone does not cause failure.
+- Scenario 4, Distinct Gemini Grounding Redirect URLs: PASS — items whose URLs share `https://vertexaisearch.cloud.google.com/grounding-api-redirect/` but differ in the long token suffix pass validation; the shared redirect prefix alone does not cause failure.
+- Scenario 5, Distinct Long Redirect Tokens: PASS — validation compares the full URL string stored in `item["url"]` without truncation; Gemini redirect URLs with distinct long tokens are treated as distinct.
+- Scenario 6, Exact Duplicate URLs: PASS — when two items share the same complete URL value, validation returns `False` with a reason that includes the duplicate URL and the affected item ranks and titles.
+- Scenario 7, Existing Required Fields Validation: PASS — items missing any of `title`, `url`, `summary`, `curation_reason`, or `rank` continue to fail validation with a reason citing missing fields.
+- Scenario 8, Existing Rank Validation: PASS — items that satisfy all required fields and have no duplicate URLs but lack a `rank=1` entry continue to fail validation with a reason citing the missing rank.
+- Overall verdict: PASS.
