@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from env_config import PROJECT_ENV_PATH, load_env_value
+from diagnostics import DiagnosticError, external_http_context
 from prompt_loader import PromptLoadError, load_prompt
 
 
@@ -17,7 +18,7 @@ GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
 DEFAULT_PROMPT_PATH = Path(__file__).parent / "prompts" / "researchers" / "techno_news.md"
 
 
-class ResearcherError(RuntimeError):
+class ResearcherError(DiagnosticError):
     """Raised when Gemini search cannot produce research output."""
 
 
@@ -61,8 +62,23 @@ class Researcher:
         try:
             with urllib.request.urlopen(request) as response:
                 api_response = json.load(response)
-        except (urllib.error.URLError, json.JSONDecodeError) as error:
-            raise ResearcherError(f"Gemini API search failed: {error}") from error
+        except urllib.error.URLError as error:
+            raise ResearcherError(
+                f"Gemini API search failed: {error}",
+                external_http_context("Gemini", self.model, request, error),
+            ) from error
+        except json.JSONDecodeError as error:
+            raise ResearcherError(
+                f"Gemini API search failed: {error}",
+                {
+                    "failure_category": "external_http_call",
+                    "provider_name": "Gemini",
+                    "model_name": self.model,
+                    "endpoint_url": request.full_url,
+                    "http_method": request.get_method(),
+                    "parse_error_message": str(error),
+                },
+            ) from error
 
         try:
             candidate = api_response["candidates"][0]
@@ -71,7 +87,18 @@ class Researcher:
             )
             items = json.loads(response_text)
         except (KeyError, IndexError, TypeError, json.JSONDecodeError) as error:
-            raise ResearcherError(f"Invalid Gemini API search response: {error}") from error
+            raise ResearcherError(
+                f"Invalid Gemini API search response: {error}",
+                {
+                    "failure_category": "model_output_parse",
+                    "provider_name": "Gemini",
+                    "model_name": self.model,
+                    "endpoint_url": request.full_url,
+                    "http_method": request.get_method(),
+                    "raw_model_text_preview": locals().get("response_text", ""),
+                    "parse_error_message": str(error),
+                },
+            ) from error
 
         return {
             "items": items,

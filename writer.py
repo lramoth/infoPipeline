@@ -8,6 +8,7 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+from diagnostics import DiagnosticError, external_http_context
 from prompt_loader import PromptLoadError, load_prompt
 
 
@@ -16,7 +17,7 @@ OLLAMA_ENDPOINT = "http://localhost:11434/api/generate"
 DEFAULT_PROMPT_PATH = Path(__file__).parent / "prompts" / "writers" / "telegram_brief.md"
 
 
-class WriterError(RuntimeError):
+class WriterError(DiagnosticError):
     """Raised when the Writer cannot produce a Telegram message."""
 
 
@@ -62,8 +63,23 @@ class Writer:
         try:
             with urllib.request.urlopen(request) as response:
                 api_response = json.load(response)
-        except (urllib.error.URLError, json.JSONDecodeError) as error:
-            raise WriterError(f"Ollama model execution failed: {error}") from error
+        except urllib.error.URLError as error:
+            raise WriterError(
+                f"Ollama model execution failed: {error}",
+                external_http_context("Ollama", self.model, request, error),
+            ) from error
+        except json.JSONDecodeError as error:
+            raise WriterError(
+                f"Ollama model execution failed: {error}",
+                {
+                    "failure_category": "external_http_call",
+                    "provider_name": "Ollama",
+                    "model_name": self.model,
+                    "endpoint_url": request.full_url,
+                    "http_method": request.get_method(),
+                    "parse_error_message": str(error),
+                },
+            ) from error
 
         message = api_response.get("response", "")
         if not message or not message.strip():

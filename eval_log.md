@@ -163,3 +163,10 @@
 - Scenario 1, Successful execution: PASS — under controlled execution, the CLI prints the final pipeline output to standard output and returns status code 0.
 - Scenario 2, Unsuccessful execution: PASS — under controlled execution, the CLI prints a readable pipeline failure message to standard error and returns a nonzero status code.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-23
+
+- Spec used: `specs/diagnostics_feature.md`.
+- Summary of work completed: Failed stages now write best-effort local JSON diagnostics under `output/diagnostics/YYYY-MM-DD/`, and failed ledger entries include the diagnostic file path when one is written. Diagnostics identify the failed stage, timestamp, failure category, error type, readable message, external HTTP context for Gemini and Ollama failures, raw model text previews for model-output parsing failures, and validation reasons with invalid output previews. Successful stages do not write diagnostics, and diagnostic write failures leave the original pipeline failure result intact.
+- Assumptions made: Diagnostic previews are capped at 2000 characters. Endpoint URLs are stored after removing common secret-bearing query parameters, request headers are never stored, and obvious API key, token, authorization, and chat ID key/value text in previews is redacted. Diagnostic paths are written beneath the configured ledger directory's `diagnostics` folder, which preserves the default `output/diagnostics/...` layout.
+- Gaps or suspected bugs: None.

@@ -1,13 +1,25 @@
+import io
 import json
 import tempfile
 import unittest
+import urllib.error
 from contextlib import redirect_stderr, redirect_stdout
 from datetime import date, datetime, timedelta
 from io import StringIO
 from pathlib import Path
 from unittest.mock import patch
 
+from curator import Curator
 from planner import Planner, RunResult, Stage, main
+from writer import Writer
+
+
+class FakeResponse(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self.close()
 
 
 class PlannerTests(unittest.TestCase):
@@ -20,6 +32,10 @@ class PlannerTests(unittest.TestCase):
 
     def read_ledger(self):
         return json.loads(self.ledger_path.read_text(encoding="utf-8"))
+
+    def read_diagnostic(self, stage_name):
+        diagnostic_path = Path(self.read_ledger()["stages"][stage_name]["diagnostic_path"])
+        return json.loads(diagnostic_path.read_text(encoding="utf-8"))
 
     def test_runs_and_validates_stages_in_order(self):
         events = []
@@ -58,6 +74,8 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(ledger["date"], date.today().isoformat())
         self.assertEqual(ledger["stages"]["first"]["status"], "done")
         self.assertEqual(ledger["stages"]["second"]["status"], "done")
+        self.assertNotIn("diagnostic_path", ledger["stages"]["first"])
+        self.assertFalse((self.ledger_path.parent / "diagnostics").exists())
         self.assertEqual(ledger["stages"]["first"]["output"], {"item": 1})
         self.assertEqual(result.output, "second output")
         self.assertEqual(
@@ -157,6 +175,12 @@ class PlannerTests(unittest.TestCase):
         self.assertFalse(ran_last_stage)
         ledger = self.read_ledger()
         self.assertEqual(ledger["stages"]["bad"]["status"], "failed")
+        diagnostic = self.read_diagnostic("bad")
+        self.assertEqual(diagnostic["stage_name"], "bad")
+        self.assertEqual(diagnostic["failure_category"], "validation_failure")
+        self.assertEqual(diagnostic["error_type"], "ValidationError")
+        self.assertEqual(diagnostic["validation_reason"], "off taste")
+        self.assertEqual(diagnostic["invalid_stage_output_preview"], "bad output")
         self.assertNotIn("last", ledger["stages"])
 
     def test_starts_fresh_ledger_when_saved_date_is_not_today(self):
@@ -228,6 +252,108 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(entry["status"], "failed")
         self.assertIsNone(entry["output"])
         self.assertIn("service unavailable", entry["validation_reason"])
+
+    def test_curator_json_parse_failure_records_raw_model_text_preview(self):
+        env_path = Path(self.temporary_directory.name) / ".env"
+        env_path.write_text("GEMINI_API_KEY=test-key\n", encoding="utf-8")
+        prompt_path = Path(self.temporary_directory.name) / "curator.md"
+        prompt_path.write_text("curate", encoding="utf-8")
+        response = {
+            "candidates": [
+                {"content": {"parts": [{"text": "not json from model"}]}}
+            ]
+        }
+
+        with patch(
+            "curator.urllib.request.urlopen",
+            return_value=FakeResponse(json.dumps(response).encode("utf-8")),
+        ):
+            result = Planner(
+                [
+                    Stage("researcher", lambda: [], lambda output: (True, "passed")),
+                    Curator(env_path=env_path, prompt_path=prompt_path),
+                ],
+                self.ledger_path,
+            ).run()
+
+        self.assertFalse(result.succeeded)
+        diagnostic = self.read_diagnostic("curator")
+        self.assertEqual(diagnostic["failure_category"], "model_output_parse")
+        self.assertEqual(diagnostic["provider_name"], "Gemini")
+        self.assertEqual(diagnostic["raw_model_text_preview"], "not json from model")
+        self.assertIn("Expecting value", diagnostic["parse_error_message"])
+
+    def test_gemini_api_failure_records_http_context_without_api_key(self):
+        env_path = Path(self.temporary_directory.name) / ".env"
+        env_path.write_text("GEMINI_API_KEY=test-key\n", encoding="utf-8")
+        prompt_path = Path(self.temporary_directory.name) / "curator.md"
+        prompt_path.write_text("curate", encoding="utf-8")
+        error = urllib.error.HTTPError(
+            "https://generativelanguage.googleapis.com/failure",
+            503,
+            "Service Unavailable",
+            hdrs=None,
+            fp=io.BytesIO(b'{"error":"temporarily unavailable","api_key":"test-key"}'),
+        )
+
+        with patch("curator.urllib.request.urlopen", side_effect=error):
+            result = Planner(
+                [
+                    Stage("researcher", lambda: [], lambda output: (True, "passed")),
+                    Curator(env_path=env_path, prompt_path=prompt_path),
+                ],
+                self.ledger_path,
+            ).run()
+
+        self.assertFalse(result.succeeded)
+        diagnostic = self.read_diagnostic("curator")
+        self.assertEqual(diagnostic["failure_category"], "external_http_call")
+        self.assertEqual(diagnostic["provider_name"], "Gemini")
+        self.assertEqual(diagnostic["model_name"], "gemini-2.5-flash")
+        self.assertIn(":generateContent", diagnostic["endpoint_url"])
+        self.assertEqual(diagnostic["http_method"], "POST")
+        self.assertEqual(diagnostic["response_status"], 503)
+        diagnostic_text = json.dumps(diagnostic)
+        self.assertIn("temporarily unavailable", diagnostic_text)
+        self.assertNotIn("test-key", diagnostic_text)
+        self.assertNotIn("X-goog-api-key", diagnostic_text)
+
+    def test_ollama_failure_records_local_endpoint_and_error_message(self):
+        prompt_path = Path(self.temporary_directory.name) / "writer.md"
+        prompt_path.write_text("write", encoding="utf-8")
+
+        with patch(
+            "writer.urllib.request.urlopen",
+            side_effect=urllib.error.URLError("connection refused"),
+        ):
+            result = Planner(
+                [
+                    Stage("curator", lambda: [{"title": "A", "url": "https://a.example", "summary": "s", "curation_reason": "r", "rank": 1}], lambda output: (True, "passed")),
+                    Writer(prompt_path=prompt_path),
+                ],
+                self.ledger_path,
+            ).run()
+
+        self.assertFalse(result.succeeded)
+        diagnostic = self.read_diagnostic("writer")
+        self.assertEqual(diagnostic["provider_name"], "Ollama")
+        self.assertEqual(diagnostic["model_name"], "gemma4:e4b")
+        self.assertEqual(diagnostic["endpoint_url"], "http://localhost:11434/api/generate")
+        self.assertIn("connection refused", diagnostic["error_message"])
+
+    def test_diagnostic_write_failure_does_not_obscure_original_error(self):
+        with patch("planner.write_diagnostic", side_effect=OSError("disk full")):
+            result = Planner(
+                [Stage("bad", lambda: "bad output", lambda output: (False, "off taste"))],
+                self.ledger_path,
+            ).run()
+
+        self.assertFalse(result.succeeded)
+        self.assertEqual(result.failed_stage, "bad")
+        self.assertEqual(result.reason, "off taste")
+        entry = self.read_ledger()["stages"]["bad"]
+        self.assertEqual(entry["status"], "failed")
+        self.assertNotIn("diagnostic_path", entry)
 
     def test_validation_error_fails_stage_and_records_output(self):
         def raise_error(output):

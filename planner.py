@@ -10,6 +10,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
+from diagnostics import write_diagnostic
 from pipeline_config import load_pipeline
 
 
@@ -60,11 +61,24 @@ class Planner:
                 passed, reason = self._validate_stage(stage, output, stage_input)
             except Exception as error:
                 reason = f"{type(error).__name__}: {error}"
-                self._record(ledger, stage_name, "failed", output, reason)
+                diagnostic_path = self._write_failure_diagnostic(
+                    stage_name,
+                    error,
+                    reason,
+                    output=output,
+                )
+                self._record(ledger, stage_name, "failed", output, reason, diagnostic_path)
                 return RunResult(False, output, stage_name, reason)
 
             status = "done" if passed else "failed"
-            self._record(ledger, stage_name, status, output, reason)
+            diagnostic_path = None
+            if not passed:
+                diagnostic_path = self._write_validation_diagnostic(
+                    stage_name,
+                    reason,
+                    output,
+                )
+            self._record(ledger, stage_name, status, output, reason, diagnostic_path)
             if not passed:
                 return RunResult(False, output, stage_name, reason)
             previous_output = output
@@ -86,17 +100,77 @@ class Planner:
         status: str,
         output: Any,
         reason: str,
+        diagnostic_path: str | Path | None = None,
     ) -> None:
-        ledger["stages"][stage_name] = {
+        entry = {
             "status": status,
             "output": output,
             "validation_reason": reason,
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
+        if diagnostic_path is not None:
+            entry["diagnostic_path"] = str(diagnostic_path)
+        ledger["stages"][stage_name] = entry
         self.ledger_path.parent.mkdir(parents=True, exist_ok=True)
         with self.ledger_path.open("w", encoding="utf-8") as ledger_file:
             json.dump(ledger, ledger_file, indent=2)
             ledger_file.write("\n")
+
+    def _write_failure_diagnostic(
+        self,
+        stage_name: str,
+        error: Exception,
+        reason: str,
+        output: Any,
+    ) -> Path | None:
+        context = dict(getattr(error, "diagnostic_context", {}) or {})
+        failure_category = context.pop("failure_category", "stage_error")
+        if output is not None:
+            context.setdefault("invalid_stage_output", output)
+        return self._try_write_diagnostic(
+            stage_name,
+            failure_category,
+            type(error).__name__,
+            reason,
+            context,
+        )
+
+    def _write_validation_diagnostic(
+        self,
+        stage_name: str,
+        reason: str,
+        output: Any,
+    ) -> Path | None:
+        return self._try_write_diagnostic(
+            stage_name,
+            "validation_failure",
+            "ValidationError",
+            reason,
+            {
+                "validation_reason": reason,
+                "invalid_stage_output": output,
+            },
+        )
+
+    def _try_write_diagnostic(
+        self,
+        stage_name: str,
+        failure_category: str,
+        error_type: str,
+        error_message: str,
+        context: dict[str, Any],
+    ) -> Path | None:
+        try:
+            return write_diagnostic(
+                self.ledger_path.parent / "diagnostics",
+                stage_name,
+                failure_category,
+                error_type,
+                error_message,
+                context,
+            )
+        except Exception:
+            return None
 
     def _stage_name(self, stage: Any) -> str:
         return getattr(stage, "name", stage.__class__.__name__.lower())
