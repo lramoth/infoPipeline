@@ -126,6 +126,7 @@
 ## Evaluation — 2026-06-23
 
 - Eval file used: `evals/pipeline_config_feature.eval.md`.
+
 - Scenario 1, Config Exists: PASS — `config/pipeline.yaml` exists in the repository.
 - Scenario 2, Valid config: PASS — the default configuration loads as YAML, assembles Researcher, Curator, and Writer in YAML order, and each assembled stage has a name-defined type plus an existing configured prompt path.
 - Scenario 3, Missing or malformed config: PASS — loading a missing config or malformed YAML raises `PipelineConfigError` with a readable message.
@@ -170,3 +171,14 @@
 - Summary of work completed: Failed stages now write best-effort local JSON diagnostics under `output/diagnostics/YYYY-MM-DD/`, and failed ledger entries include the diagnostic file path when one is written. Diagnostics identify the failed stage, timestamp, failure category, error type, readable message, external HTTP context for Gemini and Ollama failures, raw model text previews for model-output parsing failures, and validation reasons with invalid output previews. Successful stages do not write diagnostics, and diagnostic write failures leave the original pipeline failure result intact.
 - Assumptions made: Diagnostic previews are capped at 2000 characters. Endpoint URLs are stored after removing common secret-bearing query parameters, request headers are never stored, and obvious API key, token, authorization, and chat ID key/value text in previews is redacted. Diagnostic paths are written beneath the configured ledger directory's `diagnostics` folder, which preserves the default `output/diagnostics/...` layout.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-23
+
+- Eval file used: `evals/diagnostics_feature.eval.md`.
+- Scenario 1, Model output cannot be parsed: PASS — a Curator JSON parse failure writes a diagnostic with stage name, timestamp, `failure_category: model_output_parse`, a readable parse error message, and a bounded raw model text preview; the ledger entry is recorded as failed.
+- Scenario 2, External service failure: PASS — a Gemini HTTP 503 failure writes a diagnostic with provider name, model name, sanitized endpoint URL (API key is in a header, never stored; query params with secret names are stripped), HTTP method, response status, and a bounded response body preview with API key patterns redacted; no secrets appear in the diagnostic.
+- Scenario 3, Local model runtime failure: PASS — an Ollama connection error writes a diagnostic with provider name, model name, local endpoint URL, and a human-readable error message; the ledger entry is recorded as failed.
+- Scenario 4, Validation failure: PASS — a failed validation writes a diagnostic with stage name, timestamp, `failure_category: validation_failure`, the validation reason, and a bounded preview of the invalid output; subsequent stages do not run.
+- Scenario 5, Successful stage: PASS — a successfully validated stage writes no diagnostic file, the ledger entry carries no `diagnostic_path` key, and the diagnostics directory is not created.
+- Scenario 6, Diagnostic preservation fails: PASS — when `write_diagnostic` raises an exception the original pipeline failure result, failed stage name, failure reason, and ledger status are all preserved unchanged.
+- Overall verdict: PASS.
