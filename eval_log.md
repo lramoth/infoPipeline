@@ -139,3 +139,13 @@
 - Summary of work completed: The Planner now loads the default configured pipeline when no stage list is supplied, executes configured stages in order, passes each successful stage output into the next stage, validates each output before continuing, writes the ledger after every stage result, stops on stage errors or validation failures, reports the failed stage and reason, and returns the final stage output after a fully successful run. The Curator now accepts the Researcher output envelope produced by the integrated pipeline while retaining direct item-list input support. Added focused integration tests; all 56 repository tests pass.
 - Assumptions made: Existing explicit `Stage` objects remain supported for tests and direct callers; configured stage names are derived from their class names in lowercase because assembled Researcher, Curator, and Writer instances do not expose a `name` attribute. Writer validation receives both its output and the curated items it was given, matching the existing Writer validation contract.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-23
+
+- Eval file used: `evals/planner_integration_feature.eval.md`.
+- Scenario 1, Executing stages in order: PASS — the default config loads Researcher, Curator, and Writer in order, and controlled configured stages run in order, receive the expected inputs, and write output, validation reason, status, and timestamp ledger entries.
+- Scenario 2, Stage output valid: PASS — a valid stage output is recorded as done with its output and validation reason, and the following stage runs.
+- Scenario 3, Stage output invalid: PASS — an invalid stage is recorded as failed and later stages do not run.
+- Scenario 4, Stage error: PASS — a thrown stage error is reported readably, recorded as failed, and halts subsequent stages.
+- Scenario 5, Final stage: PASS — when the final stage output is valid, the planner reports that final output to the caller.
+- Overall verdict: PASS.
