@@ -3,7 +3,7 @@
 Purpose
 Validate the observable behavior described in `spec name`.
 
-Do not grade implementation details such as: 
+Do not grade or report implementation details in eval_log.md, including:
 - class names
 - method names 
 - dataclasses

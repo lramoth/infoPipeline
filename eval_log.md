@@ -231,3 +231,17 @@
 - Summary of work completed: Curator validation now accepts multiple complete curated items that cite the same URL, while still requiring every item to provide a non-empty title, URL, summary, curation reason, and rank, and still requiring at least one rank 1 item. Curator output preserves each item URL exactly as provided and does not drop items because a URL appears more than once.
 - Assumptions made: Shared URLs are valid citations even when the URL values are exactly identical; no URL normalization, canonicalization, redirect resolution, network lookup, or item-identity deduplication is performed. No new dependencies were added.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-23
+
+- Eval file used: `evals/shared_url_fix.eval.md`.
+- Scenario 1, One Complete Curated Item: PASS — `Curator.validate()` returns `True` for a single-item list with all required non-empty fields and `rank=1`.
+- Scenario 2, Multiple Complete Items With Distinct URLs: PASS — `Curator.validate()` returns `True` for a multi-item list where all fields are present and non-empty, rank 1 exists, and every URL is distinct.
+- Scenario 3, Multiple Complete Items Sharing One URL: PASS — `Curator.validate()` returns `True` when two items share the same URL but are otherwise complete; no items are removed and each item's URL is preserved exactly as provided.
+- Scenario 4, Non-List Curator Output: PASS — `Curator.validate()` returns `False` for any non-list input (dict, string, None, int), citing "Curator output is not a list".
+- Scenario 5, Empty Curated List: PASS — `Curator.validate([])` returns `False` citing no items.
+- Scenario 6, Missing Required Fields: PASS — `Curator.validate()` returns `False` when any item is missing `title`, `url`, `summary`, `curation_reason`, or `rank`, citing missing fields.
+- Scenario 7, Empty Required Fields: PASS — `Curator.validate()` returns `False` when any required field is an empty string, citing missing fields.
+- Scenario 8, No Rank 1 Item: PASS — `Curator.validate()` returns `False` when no item has `rank=1`, citing the missing rank.
+- Scenario 9, No URL Rewriting Or Canonicalization: PASS — `Curator.validate()` is a static method with no network calls, no URL parsing, and no URL mutation; it checks only field presence, field non-emptiness, and rank, leaving all URL values exactly as provided.
+- Overall verdict: PASS.

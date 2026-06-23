@@ -77,5 +77,18 @@ and must include:
 
 Evaluation reasons should describe observable behavior, not internal implementation details.
 
+Evaluation log reasons must be written as black-box observable behavior.
+Do not mention implementation identifiers or test mechanics, including class names,
+function names, method names, file paths, return values, booleans, exception class
+names, exact helper inputs, or internal algorithms.
+
+Write reasons from the product behavior perspective.
+
+Good:
+- PASS — an empty curated list is rejected with a readable reason that no items are present.
+
+Bad:
+- PASS — `Curator.validate([])` returns `False` citing no items.
+
 Build sessions must never write evaluation entries.
 Evaluation sessions must never write build-log entries.
