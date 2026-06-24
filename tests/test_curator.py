@@ -396,6 +396,37 @@ class CuratorTests(unittest.TestCase):
                     prompt_path=self.prompt_path,
                 ).run([])
 
+    def test_missing_gemini_model_text_reports_provider_response_context(self):
+        response = json.dumps(
+            {
+                "candidates": [
+                    {
+                        "content": {},
+                        "finishReason": "SAFETY",
+                        "safetyRatings": [{"category": "blocked"}],
+                    }
+                ]
+            }
+        ).encode("utf-8")
+
+        with patch(
+            "curator.urllib.request.urlopen",
+            return_value=FakeResponse(response),
+        ):
+            with self.assertRaisesRegex(CuratorError, "Invalid Gemini API curation response") as error:
+                Curator(
+                    endpoint=self.gemini_endpoint,
+                    env_path=self.env_path,
+                    prompt_path=self.prompt_path,
+                ).run([])
+
+        context = error.exception.diagnostic_context
+        self.assertEqual(context["failure_category"], "model_output_parse")
+        self.assertEqual(context["provider_name"], "Gemini")
+        self.assertEqual(context["raw_model_text_preview"], "")
+        self.assertIn("parts", context["parse_error_message"])
+        self.assertEqual(context["provider_response_preview"]["finishReason"], "SAFETY")
+
     def test_loads_configured_prompt_at_run_time(self):
         self.prompt_path.write_text("updated curator prompt", encoding="utf-8")
         with patch(

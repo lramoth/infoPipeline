@@ -508,3 +508,10 @@
 - Scenario 11, Diagnostic Files Are Not Required To Be Deleted: PASS — existing diagnostic files remain on disk after a new invocation, the latest ledger does not contain diagnostic pointers from earlier runs, and diagnostics for the latest failure are recorded when preservation succeeds.
 - Scenario 12, Automated Tests Avoid Live External Calls: PASS — latest-run ledger behavior, OpenAI web-search request behavior, zero-item Researcher failure, and diagnostic safety are all covered with controlled inputs and mocked provider responses; all 127 repository tests pass without any live external service call.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/raw_provider_response_diagnostics_feature.md`.
+- Summary of work completed: Model-backed stage failures now preserve bounded non-secret provider response context when no model text can be extracted, so missing-text provider responses can be diagnosed from local diagnostic records. Existing raw model text parse diagnostics, validation diagnostics, HTTP failure diagnostics, and successful-stage behavior remain unchanged.
+- Assumptions made: The additional provider response preview is recorded only when model text is unavailable, because existing raw-text diagnostics already satisfy parse-failure debugging when text exists. The preview is bounded and sanitized by the existing diagnostic preview path. No new dependencies were added.
+- Gaps or suspected bugs: Real Gemini, OpenAI, Ollama, and Telegram endpoints were not called during implementation; live-provider confirmation remains for a separate evaluation session.

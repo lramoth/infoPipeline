@@ -401,6 +401,89 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(diagnostic["raw_model_text_preview"], "not json from model")
         self.assertIn("Expecting value", diagnostic["parse_error_message"])
 
+    def test_gemini_missing_model_text_records_provider_response_preview(self):
+        env_path = Path(self.temporary_directory.name) / ".env"
+        env_path.write_text("GEMINI_API_KEY=test-key\n", encoding="utf-8")
+        prompt_path = Path(self.temporary_directory.name) / "research.md"
+        prompt_path.write_text("research", encoding="utf-8")
+        response = {
+            "candidates": [
+                {
+                    "content": {},
+                    "finishReason": "SAFETY",
+                    "safetyRatings": [{"category": "HARM_CATEGORY_DANGEROUS_CONTENT"}],
+                    "groundingMetadata": {"searchEntryPoint": {"renderedContent": "search"}},
+                }
+            ]
+        }
+
+        with patch(
+            "researcher.urllib.request.urlopen",
+            return_value=FakeResponse(json.dumps(response).encode("utf-8")),
+        ):
+            result = Planner(
+                [
+                    Researcher(
+                        endpoint="https://gemini.example/v1beta/models",
+                        env_path=env_path,
+                        prompt_path=prompt_path,
+                    )
+                ],
+                self.ledger_path,
+            ).run()
+
+        self.assertFalse(result.succeeded)
+        self.assertEqual(result.failed_stage, "researcher")
+        diagnostic = self.read_diagnostic("researcher")
+        self.assertEqual(diagnostic["failure_category"], "model_output_parse")
+        self.assertEqual(diagnostic["provider_name"], "Gemini")
+        self.assertEqual(diagnostic["model_name"], "gemini-2.5-flash")
+        self.assertEqual(diagnostic["raw_model_text_preview"], "")
+        self.assertIn("parts", diagnostic["parse_error_message"])
+        self.assertIn("SAFETY", diagnostic["provider_response_preview"])
+        self.assertIn("groundingMetadata", diagnostic["provider_response_preview"])
+        self.assertNotIn("test-key", json.dumps(diagnostic))
+
+    def test_openai_missing_model_text_records_provider_response_preview(self):
+        env_path = Path(self.temporary_directory.name) / ".env"
+        env_path.write_text("OPENAI_API_KEY=openai-key\n", encoding="utf-8")
+        prompt_path = Path(self.temporary_directory.name) / "research.md"
+        prompt_path.write_text("research", encoding="utf-8")
+        response = {
+            "output": [
+                {"type": "web_search_call", "id": "search_1", "status": "completed"},
+            ],
+            "metadata": {"trace": "no message output"},
+        }
+
+        with patch(
+            "researcher.urllib.request.urlopen",
+            return_value=FakeResponse(json.dumps(response).encode("utf-8")),
+        ):
+            result = Planner(
+                [
+                    Researcher(
+                        provider="openai",
+                        model="gpt-4.1-mini",
+                        endpoint="https://openai.example/responses",
+                        env_path=env_path,
+                        prompt_path=prompt_path,
+                    )
+                ],
+                self.ledger_path,
+            ).run()
+
+        self.assertFalse(result.succeeded)
+        diagnostic = self.read_diagnostic("researcher")
+        self.assertEqual(diagnostic["failure_category"], "model_output_parse")
+        self.assertEqual(diagnostic["provider_name"], "OpenAI")
+        self.assertEqual(diagnostic["model_name"], "gpt-4.1-mini")
+        self.assertEqual(diagnostic["raw_model_text_preview"], "")
+        self.assertIn("output text", diagnostic["parse_error_message"])
+        self.assertIn("search_1", diagnostic["provider_response_preview"])
+        self.assertIn("no message output", diagnostic["provider_response_preview"])
+        self.assertNotIn("openai-key", json.dumps(diagnostic))
+
     def test_gemini_api_failure_records_http_context_without_api_key(self):
         env_path = Path(self.temporary_directory.name) / ".env"
         env_path.write_text("GEMINI_API_KEY=test-key\n", encoding="utf-8")

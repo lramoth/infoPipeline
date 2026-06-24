@@ -105,17 +105,17 @@ class Curator:
             )
             curated_items = extract_json_payload(response_text, list)
         except (KeyError, IndexError, TypeError, StructuredOutputError) as error:
+            response_text = locals().get("response_text", "")
             raise CuratorError(
                 f"Invalid Gemini API curation response: {error}",
-                {
-                    "failure_category": "model_output_parse",
-                    "provider_name": "Gemini",
-                    "model_name": self.model,
-                    "endpoint_url": request.full_url,
-                    "http_method": request.get_method(),
-                    "raw_model_text_preview": locals().get("response_text", ""),
-                    "parse_error_message": str(error),
-                },
+                _model_parse_context(
+                    "Gemini",
+                    self.model,
+                    request,
+                    response_text,
+                    str(error),
+                    locals().get("candidate", api_response),
+                ),
             ) from error
 
         return curated_items
@@ -162,17 +162,17 @@ class Curator:
             response_text = _extract_openai_text(api_response)
             curated_items = extract_json_payload(response_text, list)
         except (KeyError, IndexError, TypeError, StructuredOutputError) as error:
+            response_text = locals().get("response_text", "")
             raise CuratorError(
                 f"Invalid {provider_name} API curation response: {error}",
-                {
-                    "failure_category": "model_output_parse",
-                    "provider_name": provider_name,
-                    "model_name": self.model,
-                    "endpoint_url": request.full_url,
-                    "http_method": request.get_method(),
-                    "raw_model_text_preview": locals().get("response_text", ""),
-                    "parse_error_message": str(error),
-                },
+                _model_parse_context(
+                    provider_name,
+                    self.model,
+                    request,
+                    response_text,
+                    str(error),
+                    api_response,
+                ),
             ) from error
 
         return curated_items
@@ -215,3 +215,25 @@ def _extract_openai_text(api_response: dict[str, Any]) -> str:
     if not text_parts:
         raise KeyError("OpenAI response did not contain output text")
     return "".join(text_parts)
+
+
+def _model_parse_context(
+    provider_name: str,
+    model_name: str,
+    request: urllib.request.Request,
+    response_text: str,
+    parse_error_message: str,
+    provider_response: Any,
+) -> dict[str, Any]:
+    context: dict[str, Any] = {
+        "failure_category": "model_output_parse",
+        "provider_name": provider_name,
+        "model_name": model_name,
+        "endpoint_url": request.full_url,
+        "http_method": request.get_method(),
+        "raw_model_text_preview": response_text,
+        "parse_error_message": parse_error_message,
+    }
+    if not response_text:
+        context["provider_response_preview"] = provider_response
+    return context
