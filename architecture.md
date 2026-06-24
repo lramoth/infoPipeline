@@ -19,15 +19,17 @@ LLM call — the Planner and Delivery pieces are plain code.
   writes a JSON task ledger, validates each stage's output before
   advancing to the next, and records the run outcome. It is designed to be
   invoked on a schedule by OpenClaw or cron.
-- **Researcher** (Gemini, search-grounded API) — finds raw candidate
-  items via search. Structured extraction, low reasoning demand.
-- **Curator** (Gemini API prompt) — uses a configured prompt to ask Gemini to
-  rank and filter the researcher's raw items. Validation checks that the
-  curated output has required fields and includes a rank 1 item.
-- **Writer** (local `gemma4:e4b` via Ollama) — formats the curator's
-  ranked list into the final outbound message. The model generates item prose;
-  Python assembles the final message from the configured template and curator
-  titles/URLs.
+- **Researcher** (configured search-capable model provider) — finds raw
+  candidate items via search. Gemini and OpenAI are supported providers.
+  Structured extraction, low reasoning demand.
+- **Curator** (configured model provider) — uses a configured prompt to rank
+  and filter the researcher's raw items. Gemini and OpenAI are supported
+  providers. Validation checks that the curated output has required fields and
+  includes a rank 1 item.
+- **Writer** (configured provider, currently local `gemma4:e4b` via Ollama) —
+  formats the curator's ranked list into the final outbound message. The model
+  generates item prose; Python assembles the final message from the configured
+  template and curator titles/URLs.
 - **Delivery** (plain Python) — transports the final outbound message to
   enabled delivery providers after all configured stages succeed. Telegram is
   the currently implemented provider.
@@ -71,8 +73,8 @@ Source:
 ```
 
 Curator output remains authoritative for item titles, source URLs, and rank
-order. The local model supplies only per-item prose used as `{note}`; Python
-assembles the final message from the configured template.
+order. The configured Writer model supplies only per-item prose used as
+`{note}`; Python assembles the final message from the configured template.
 
 ## Data flow
 
@@ -106,11 +108,15 @@ edit, rank, filter, or summarize the Writer's outbound message.
 
 ## External dependencies
 
-- **Gemini API** — Researcher search results and Curator ranking/filtering.
-- **Ollama (local)** — Writer item prose generation.
+- **Gemini API** — supported provider for Researcher search results and Curator
+  ranking/filtering.
+- **OpenAI API** — supported provider for Researcher search results and Curator
+  ranking/filtering.
+- **Ollama (local)** — supported provider for Writer item prose generation.
 - **Telegram Bot API** — currently implemented delivery provider.
-- **Local `.env` file** — contains `GEMINI_API_KEY`,
-  `TELEGRAM_BOT_TOKEN`, and `TELEGRAM_CHAT_ID`.
+- **Local `.env` file** — contains provider and delivery settings such as
+  `GEMINI_API_KEY`, `OPENAI_API_KEY`, `TELEGRAM_BOT_TOKEN`, and
+  `TELEGRAM_CHAT_ID`.
 
 ## Ledger
 

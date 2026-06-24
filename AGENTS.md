@@ -3,10 +3,12 @@
 ## Stack & conventions
 - Prefer the Python standard library when practical. Add dependencies only when they materially simplify implementation.
 - Planner is the coordinator.
-- Researcher stage call Gemini API search
-- Curator stage takes search results and applies a prompt (via the Gemini
-  API) that curates what was found.
-- Writer stage call local Ollama (model: gemma4:e4b).
+- Researcher stage uses the configured model provider for search. Supported
+  providers: Gemini and OpenAI.
+- Curator stage takes search results and applies a prompt using the configured
+  model provider. Supported providers: Gemini and OpenAI.
+- Writer stage uses configured provider logic, currently supporting only local
+  Ollama (model: gemma4:e4b).
 - Delivery stage posts to Telegram.
 - Runs under the OpenClaw agent runtime.
 
@@ -26,11 +28,12 @@ Well-established third-party libraries may be added when implementing the featur
   implementation that satisfies the spec. This includes module names,
   function names, class names, internal data structures, and helper methods,
   unless the spec explicitly defines them.
-- Calls to Gemini and Telegram aren't needed while implementing logic.
+- Calls to Gemini, OpenAI, Ollama, and Telegram aren't needed while implementing
+  logic.
 - Real calls happen only during the eval step, run as a separate session:
-  it should call the real Gemini API and the real Telegram endpoint, since
-  downstream evaluation needs genuine search data and a genuine delivery
-  confirmation.
+  it should call the real configured model provider endpoints and the real
+  Telegram endpoint when the evaluation scenario requires genuine search,
+  model, or delivery confirmation.
 - Do not explore, list, or reference anything outside this directory tree.
 
 ## Definition of done
