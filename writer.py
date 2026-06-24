@@ -14,6 +14,7 @@ from prompt_loader import PromptLoadError, load_prompt
 
 OLLAMA_MODEL = "gemma4:e4b"
 OLLAMA_ENDPOINT = "http://localhost:11434/api/generate"
+PROVIDER_OLLAMA = "ollama"
 
 
 class WriterError(DiagnosticError):
@@ -27,9 +28,11 @@ class Writer:
         self,
         prompt_path: str | Path,
         template_path: str | Path,
+        provider: str = PROVIDER_OLLAMA,
         model: str = OLLAMA_MODEL,
         endpoint: str = OLLAMA_ENDPOINT,
     ) -> None:
+        self.provider = provider
         self.model = model
         self.endpoint = endpoint
         self.prompt_path = Path(prompt_path)
@@ -37,6 +40,9 @@ class Writer:
 
     def run(self, items: list[dict[str, Any]]) -> str:
         """Format curated items into an outbound message and return it."""
+        if self.provider != PROVIDER_OLLAMA:
+            raise WriterError(f"Unsupported Writer model provider: {self.provider}")
+
         if not items:
             raise WriterError("Curator output is empty — no items to format")
 

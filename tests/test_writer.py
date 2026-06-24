@@ -133,6 +133,14 @@ class WriterTests(unittest.TestCase):
             with self.assertRaisesRegex(WriterError, "Ollama model execution failed"):
                 Writer(prompt_path=self.prompt_path, template_path=self.template_path).run([make_curator_item(1)])
 
+    def test_non_ollama_provider_raises_readable_error(self):
+        with self.assertRaisesRegex(WriterError, "Unsupported Writer model provider"):
+            Writer(
+                provider="openai",
+                prompt_path=self.prompt_path,
+                template_path=self.template_path,
+            ).run([make_curator_item(1)])
+
     def test_empty_ollama_response_raises_writer_error(self):
         with patch(
             "writer.urllib.request.urlopen",

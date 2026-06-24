@@ -431,3 +431,10 @@
 - Scenario 10, Existing Pipeline Behavior Remains Unchanged: PASS — configured stage validation, Writer message assembly, and enabled delivery behavior all continue to operate correctly after profile selection resolves the configured paths, without requiring live Gemini, Ollama, or Telegram calls during automated checks.
 - Scenario 11, Repository Tests Still Pass Without Live External Calls: PASS — all 110 repository tests pass; explicit profile selection, default profile behavior, missing and invalid profile failures, and profile-specific ledger behavior are all covered, as are existing configuration, stage, Writer, and delivery behaviors, without any live external service call.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/configurable_model_providers_feature.md`.
+- Summary of work completed: Researcher and Curator can now be configured to use either Gemini or OpenAI while preserving their existing observable output contracts, and Writer now has explicit provider handling that accepts Ollama and rejects unsupported providers with a readable error. Pipeline configuration now rejects unsupported stage/provider combinations before a run. Missing selected-provider credentials and provider call failures are reported readably, and automated tests cover provider switching with controlled responses rather than live external service calls.
+- Assumptions made: OpenAI Researcher uses the configured model through the OpenAI Responses API with web search enabled, and OpenAI Curator uses the same Responses API without search tooling. OpenAI response text may appear either as top-level output text or message output content, and Researcher preserves available OpenAI web search call records as provider metadata. No new dependencies were added.
+- Gaps or suspected bugs: Real OpenAI, Gemini, Ollama, and Telegram endpoints were not called during implementation; live-provider confirmation remains for a separate evaluation session.

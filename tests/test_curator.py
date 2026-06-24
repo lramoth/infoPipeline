@@ -42,6 +42,19 @@ def make_api_text_response(model_text: str) -> bytes:
     return json.dumps(response).encode("utf-8")
 
 
+def make_openai_response(model_text: str) -> bytes:
+    return json.dumps(
+        {
+            "output": [
+                {
+                    "type": "message",
+                    "content": [{"type": "output_text", "text": model_text}],
+                }
+            ]
+        }
+    ).encode("utf-8")
+
+
 class CuratorTests(unittest.TestCase):
     def setUp(self):
         self.temporary_directory = tempfile.TemporaryDirectory()
@@ -73,6 +86,53 @@ class CuratorTests(unittest.TestCase):
         self.assertIn("custom curator prompt", prompt_text)
         self.assertIn(json.dumps(input_items, indent=2), prompt_text)
         self.assertNotIn("tools", request_body)
+        self.assertEqual(output, curated)
+
+    def test_sends_items_to_openai_without_search_and_returns_curated_list(self):
+        self.env_path.write_text("OPENAI_API_KEY=openai-key\n", encoding="utf-8")
+        input_items = [
+            {"title": "A", "url": "https://a.example", "summary": "A summary"},
+            {"title": "B", "url": "https://b.example", "summary": "B summary"},
+        ]
+        curated = [make_curated_item(1), make_curated_item(2)]
+
+        with patch(
+            "curator.urllib.request.urlopen",
+            return_value=FakeResponse(make_openai_response(json.dumps(curated))),
+        ) as urlopen:
+            output = Curator(
+                provider="openai",
+                model="gpt-4.1-mini",
+                env_path=self.env_path,
+                prompt_path=self.prompt_path,
+            ).run(input_items)
+
+        request = urlopen.call_args.args[0]
+        self.assertEqual(request.full_url, "https://api.openai.com/v1/responses")
+        self.assertEqual(request.headers["Authorization"], "Bearer openai-key")
+        request_body = json.loads(request.data)
+        self.assertEqual(request_body["model"], "gpt-4.1-mini")
+        self.assertIn("custom curator prompt", request_body["input"])
+        self.assertIn(json.dumps(input_items, indent=2), request_body["input"])
+        self.assertNotIn("tools", request_body)
+        self.assertEqual(output, curated)
+
+    def test_openai_response_output_text_shortcut_is_accepted(self):
+        self.env_path.write_text("OPENAI_API_KEY=openai-key\n", encoding="utf-8")
+        curated = [make_curated_item(1)]
+        response = json.dumps({"output_text": json.dumps(curated)}).encode("utf-8")
+
+        with patch(
+            "curator.urllib.request.urlopen",
+            return_value=FakeResponse(response),
+        ):
+            output = Curator(
+                provider="openai",
+                model="gpt-4.1-mini",
+                env_path=self.env_path,
+                prompt_path=self.prompt_path,
+            ).run([])
+
         self.assertEqual(output, curated)
 
     def test_accepts_curated_items_wrapped_in_markdown_code_fence(self):
@@ -254,6 +314,38 @@ class CuratorTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(CuratorError, "Gemini API curation failed"):
                 Curator(env_path=self.env_path, prompt_path=self.prompt_path).run([])
+
+    def test_openai_api_errors_are_reported_with_provider_context(self):
+        self.env_path.write_text("OPENAI_API_KEY=openai-key\n", encoding="utf-8")
+
+        with patch(
+            "curator.urllib.request.urlopen",
+            side_effect=urllib.error.URLError("service unavailable"),
+        ):
+            with self.assertRaisesRegex(CuratorError, "OpenAI API curation failed"):
+                Curator(
+                    provider="openai",
+                    model="gpt-4.1-mini",
+                    env_path=self.env_path,
+                    prompt_path=self.prompt_path,
+                ).run([])
+
+    def test_missing_openai_key_reports_readable_failure(self):
+        with self.assertRaisesRegex(Exception, "OPENAI_API_KEY"):
+            Curator(
+                provider="openai",
+                model="gpt-4.1-mini",
+                env_path=self.env_path,
+                prompt_path=self.prompt_path,
+            ).run([])
+
+    def test_unsupported_curator_provider_reports_readable_failure(self):
+        with self.assertRaisesRegex(CuratorError, "Unsupported Curator model provider"):
+            Curator(
+                provider="other",
+                env_path=self.env_path,
+                prompt_path=self.prompt_path,
+            ).run([])
 
     def test_malformed_gemini_response_raises_curator_error(self):
         bad_response = json.dumps({"candidates": [{"content": {"parts": [{"text": "not json"}]}}]}).encode()

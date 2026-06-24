@@ -24,6 +24,11 @@ STAGE_TYPES = {
 DELIVERY_TYPES = {
     "telegram": TelegramDelivery,
 }
+SUPPORTED_STAGE_PROVIDERS = {
+    "researcher": {"gemini", "openai"},
+    "curator": {"gemini", "openai"},
+    "writer": {"ollama"},
+}
 
 
 class PipelineConfigError(RuntimeError):
@@ -186,6 +191,12 @@ def _assemble_stage(
                 raise PipelineConfigError(
                     f"Model for stage {name} is missing required field: {required_field}"
                 )
+        provider = model["provider"]
+        if provider not in SUPPORTED_STAGE_PROVIDERS[name]:
+            raise PipelineConfigError(
+                f"Unsupported model provider for stage {name}: {provider}"
+            )
+        constructor_args["provider"] = provider
         constructor_args["model"] = model["name"]
         if "endpoint" in model:
             if not isinstance(model["endpoint"], str) or not model["endpoint"]:

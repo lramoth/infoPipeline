@@ -75,6 +75,7 @@ stages:
             stages = load_pipeline()
 
         self.assertEqual([type(stage) for stage in stages], [Writer, Researcher, Curator])
+        self.assertEqual(stages[0].provider, "ollama")
         self.assertEqual(stages[0].model, "custom-writer")
         self.assertEqual(stages[0].endpoint, "http://localhost:9999/generate")
         self.assertEqual(
@@ -132,6 +133,64 @@ stages:
         )
         with self.assertRaisesRegex(PipelineConfigError, "name"):
             load_pipeline()
+
+    def test_model_provider_is_passed_to_researcher_and_curator(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    researcher_prompt_path: prompts/researchers/current_brief.md
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+  - name: curator
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+"""
+        )
+
+        stages = load_pipeline()
+
+        self.assertEqual(stages[0].provider, "openai")
+        self.assertEqual(stages[0].model, "gpt-4.1-mini")
+        self.assertEqual(stages[0].endpoint, "https://api.openai.com/v1/responses")
+        self.assertEqual(stages[1].provider, "openai")
+        self.assertEqual(stages[1].model, "gpt-4.1-mini")
+        self.assertEqual(stages[1].endpoint, "https://api.openai.com/v1/responses")
+
+    def test_unsupported_model_provider_for_stage_is_an_error(self):
+        cases = [
+            ("researcher", "ollama"),
+            ("curator", "ollama"),
+            ("writer", "openai"),
+        ]
+
+        for stage_name, provider in cases:
+            with self.subTest(stage_name=stage_name, provider=provider):
+                self.write_config(
+                    f"""default_profile: sample
+profiles:
+  sample:
+    researcher_prompt_path: prompts/researchers/current_brief.md
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: {stage_name}
+    model:
+      provider: {provider}
+      name: unsupported-model
+"""
+                )
+
+                with self.assertRaisesRegex(PipelineConfigError, "Unsupported model provider"):
+                    load_pipeline()
 
     def test_prompt_driven_stage_without_prompt_path_is_an_error(self):
         self.write_config(
