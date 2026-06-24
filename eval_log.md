@@ -389,3 +389,10 @@
 - Scenario 5, Historical Artifacts Are Not Rewritten: PASS — historical build logs, evaluation entries, and prior topic-specific wording remain in the append-only log without modification, and current active test behavior is evaluated separately from those historical records.
 - Scenario 6, Repository Tests Still Pass Without Live External Calls: PASS — all 103 repository tests pass; configured prompt-path behavior, Writer template-path behavior, and Writer validation with topic-neutral synthetic briefing labels all succeed without any live Gemini, Ollama, or Telegram call.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/config_path_filename_agnostic_tests_feature.md`.
+- Summary of work completed: Active pipeline configuration tests now prove that Researcher, Curator, and Writer prompt paths and Writer template paths are honored from configuration using arbitrary valid fixture filenames, including non-default Writer prompt and template filenames. Default configuration checks continue to confirm that referenced prompt and template files exist without requiring exact filenames, and existing configured path validation failures remain covered.
+- Assumptions made: Runtime configuration, prompt files, template files, and prompt/template content were left unchanged because the spec only changed active test expectations. No new dependencies were added.
+- Gaps or suspected bugs: None.

@@ -23,8 +23,8 @@ class PipelineConfigTests(unittest.TestCase):
         for relative_path in (
             "prompts/researchers/current_brief.md",
             "prompts/curators/taste_filter.md",
-            "prompts/writers/outbound_brief.md",
-            "prompts/writers/template.md",
+            "prompts/writers/message_prompt.md",
+            "prompts/writers/message_layout.md",
         ):
             prompt_path = self.project_root / relative_path
             prompt_path.parent.mkdir(parents=True, exist_ok=True)
@@ -49,8 +49,8 @@ class PipelineConfigTests(unittest.TestCase):
         self.write_config(
             """stages:
   - name: writer
-    prompt_path: prompts/writers/outbound_brief.md
-    template_path: prompts/writers/template.md
+    prompt_path: prompts/writers/message_prompt.md
+    template_path: prompts/writers/message_layout.md
     model:
       provider: ollama
       name: custom-writer
@@ -70,12 +70,12 @@ class PipelineConfigTests(unittest.TestCase):
         self.assertEqual(stages[0].endpoint, "http://localhost:9999/generate")
         self.assertEqual(
             stages[0].template_path,
-            self.project_root / "prompts/writers/template.md",
+            self.project_root / "prompts/writers/message_layout.md",
         )
         self.assertEqual(
             [stage.prompt_path for stage in stages],
             [
-                self.project_root / "prompts/writers/outbound_brief.md",
+                self.project_root / "prompts/writers/message_prompt.md",
                 self.project_root / "prompts/researchers/current_brief.md",
                 self.project_root / "prompts/curators/taste_filter.md",
             ],
@@ -110,7 +110,7 @@ class PipelineConfigTests(unittest.TestCase):
         self.write_config(
             """stages:
   - name: writer
-    prompt_path: prompts/writers/outbound_brief.md
+    prompt_path: prompts/writers/message_prompt.md
 """
         )
         with self.assertRaisesRegex(PipelineConfigError, "template_path"):
@@ -132,8 +132,8 @@ class PipelineConfigTests(unittest.TestCase):
         self.write_config(
             """stages:
   - name: writer
-    prompt_path: prompts/writers/outbound_brief.md
-    template_path: prompts/writers/missing-template.md
+    prompt_path: prompts/writers/message_prompt.md
+    template_path: prompts/writers/missing-layout.md
 """
         )
         with self.assertRaisesRegex(PipelineConfigError, "template file does not exist"):
@@ -155,7 +155,8 @@ class PipelineConfigTests(unittest.TestCase):
         self.write_config(
             """stages:
   - name: writer
-    prompt_path: prompts/writers/outbound_brief.md
+    prompt_path: prompts/writers/message_prompt.md
+    template_path: prompts/writers/message_layout.md
 delivery:
   - provider: telegram
     enabled: true
@@ -170,7 +171,8 @@ delivery:
         self.write_config(
             """stages:
   - name: writer
-    prompt_path: prompts/writers/outbound_brief.md
+    prompt_path: prompts/writers/message_prompt.md
+    template_path: prompts/writers/message_layout.md
 delivery:
   - provider: telegram
     enabled: false
@@ -183,7 +185,8 @@ delivery:
         self.write_config(
             """stages:
   - name: writer
-    prompt_path: prompts/writers/outbound_brief.md
+    prompt_path: prompts/writers/message_prompt.md
+    template_path: prompts/writers/message_layout.md
 delivery:
   provider: telegram
   enabled: true
@@ -197,7 +200,8 @@ delivery:
         self.write_config(
             """stages:
   - name: writer
-    prompt_path: prompts/writers/outbound_brief.md
+    prompt_path: prompts/writers/message_prompt.md
+    template_path: prompts/writers/message_layout.md
 delivery:
   - provider: telegram
 """
