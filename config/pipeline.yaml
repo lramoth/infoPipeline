@@ -12,10 +12,12 @@ stages:
     model:
       provider: gemini
       name: gemini-2.5-flash
+      endpoint: https://generativelanguage.googleapis.com/v1beta/models
   - name: curator
     model:
       provider: gemini
       name: gemini-2.5-flash
+      endpoint: https://generativelanguage.googleapis.com/v1beta/models
   - name: writer
     model:
       provider: ollama

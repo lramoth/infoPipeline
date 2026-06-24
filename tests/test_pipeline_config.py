@@ -67,7 +67,15 @@ stages:
       name: custom-writer
       endpoint: http://localhost:9999/generate
   - name: researcher
+    model:
+      provider: gemini
+      name: gemini-2.5-flash
+      endpoint: https://gemini.example/v1beta/models
   - name: curator
+    model:
+      provider: gemini
+      name: gemini-2.5-flash
+      endpoint: https://gemini.example/v1beta/models
 """
         )
 
@@ -148,10 +156,12 @@ stages:
     model:
       provider: openai
       name: gpt-4.1-mini
+      endpoint: https://openai.example/responses
   - name: curator
     model:
       provider: openai
       name: gpt-4.1-mini
+      endpoint: https://openai.example/responses
 """
         )
 
@@ -159,10 +169,10 @@ stages:
 
         self.assertEqual(stages[0].provider, "openai")
         self.assertEqual(stages[0].model, "gpt-4.1-mini")
-        self.assertEqual(stages[0].endpoint, "https://api.openai.com/v1/responses")
+        self.assertEqual(stages[0].endpoint, "https://openai.example/responses")
         self.assertEqual(stages[1].provider, "openai")
         self.assertEqual(stages[1].model, "gpt-4.1-mini")
-        self.assertEqual(stages[1].endpoint, "https://api.openai.com/v1/responses")
+        self.assertEqual(stages[1].endpoint, "https://openai.example/responses")
 
     def test_unsupported_model_provider_for_stage_is_an_error(self):
         cases = [
@@ -186,6 +196,7 @@ stages:
     model:
       provider: {provider}
       name: unsupported-model
+      endpoint: https://model.example/endpoint
 """
                 )
 
@@ -288,6 +299,52 @@ stages:
         with self.assertRaisesRegex(PipelineConfigError, "name"):
             load_pipeline()
 
+    def test_model_object_requires_endpoint(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    researcher_prompt_path: prompts/researchers/current_brief.md
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    model:
+      provider: gemini
+      name: gemini-2.5-flash
+"""
+        )
+        with self.assertRaisesRegex(PipelineConfigError, "endpoint"):
+            load_pipeline()
+
+    def test_model_endpoint_must_be_non_empty_string(self):
+        cases = [
+            "",
+            "[]",
+        ]
+
+        for endpoint in cases:
+            with self.subTest(endpoint=endpoint):
+                self.write_config(
+                    f"""default_profile: sample
+profiles:
+  sample:
+    researcher_prompt_path: prompts/researchers/current_brief.md
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    model:
+      provider: gemini
+      name: gemini-2.5-flash
+      endpoint: {endpoint}
+"""
+                )
+                with self.assertRaisesRegex(PipelineConfigError, "endpoint"):
+                    load_pipeline()
+
     def test_explicit_profile_supplies_profile_specific_paths(self):
         finance_researcher_path = self.project_root / "prompts/researchers/market_scan.md"
         finance_curator_path = self.project_root / "prompts/curators/risk_filter.md"
@@ -317,8 +374,20 @@ profiles:
     writer_template_path: prompts/writers/finance_layout.md
 stages:
   - name: researcher
+    model:
+      provider: gemini
+      name: gemini-2.5-flash
+      endpoint: https://gemini.example/v1beta/models
   - name: curator
+    model:
+      provider: gemini
+      name: gemini-2.5-flash
+      endpoint: https://gemini.example/v1beta/models
   - name: writer
+    model:
+      provider: ollama
+      name: custom-writer
+      endpoint: http://localhost:9999/generate
 """
         )
 
@@ -450,6 +519,7 @@ class DefaultPipelineConfigTests(unittest.TestCase):
         self.assertEqual([type(stage) for stage in stages], [Researcher, Curator, Writer])
         for stage in stages:
             self.assertTrue(stage.prompt_path.is_file())
+            self.assertTrue(stage.endpoint)
         self.assertTrue(stages[2].template_path.is_file())
 
     def test_default_profile_is_declared(self):

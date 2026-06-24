@@ -62,6 +62,8 @@ class CuratorTests(unittest.TestCase):
         self.env_path.write_text("GEMINI_API_KEY=test-key\n", encoding="utf-8")
         self.prompt_path = Path(self.temporary_directory.name) / "curator.md"
         self.prompt_path.write_text("custom curator prompt", encoding="utf-8")
+        self.gemini_endpoint = "https://gemini.example/v1beta/models"
+        self.openai_endpoint = "https://openai.example/responses"
 
     def tearDown(self):
         self.temporary_directory.cleanup()
@@ -77,9 +79,17 @@ class CuratorTests(unittest.TestCase):
             "curator.urllib.request.urlopen",
             return_value=FakeResponse(make_api_response(curated)),
         ) as urlopen:
-            output = Curator(env_path=self.env_path, prompt_path=self.prompt_path).run(input_items)
+            output = Curator(
+                endpoint=self.gemini_endpoint,
+                env_path=self.env_path,
+                prompt_path=self.prompt_path,
+            ).run(input_items)
 
         request = urlopen.call_args.args[0]
+        self.assertEqual(
+            request.full_url,
+            "https://gemini.example/v1beta/models/gemini-2.5-flash:generateContent",
+        )
         self.assertEqual(request.headers["X-goog-api-key"], "test-key")
         request_body = json.loads(request.data)
         prompt_text = request_body["contents"][0]["parts"][0]["text"]
@@ -103,12 +113,13 @@ class CuratorTests(unittest.TestCase):
             output = Curator(
                 provider="openai",
                 model="gpt-4.1-mini",
+                endpoint=self.openai_endpoint,
                 env_path=self.env_path,
                 prompt_path=self.prompt_path,
             ).run(input_items)
 
         request = urlopen.call_args.args[0]
-        self.assertEqual(request.full_url, "https://api.openai.com/v1/responses")
+        self.assertEqual(request.full_url, self.openai_endpoint)
         self.assertEqual(request.headers["Authorization"], "Bearer openai-key")
         request_body = json.loads(request.data)
         self.assertEqual(request_body["model"], "gpt-4.1-mini")
@@ -129,6 +140,7 @@ class CuratorTests(unittest.TestCase):
             output = Curator(
                 provider="openai",
                 model="gpt-4.1-mini",
+                endpoint=self.openai_endpoint,
                 env_path=self.env_path,
                 prompt_path=self.prompt_path,
             ).run([])
@@ -143,7 +155,11 @@ class CuratorTests(unittest.TestCase):
             "curator.urllib.request.urlopen",
             return_value=FakeResponse(make_api_text_response(model_text)),
         ):
-            output = Curator(env_path=self.env_path, prompt_path=self.prompt_path).run([])
+            output = Curator(
+                endpoint=self.gemini_endpoint,
+                env_path=self.env_path,
+                prompt_path=self.prompt_path,
+            ).run([])
 
         self.assertEqual(output, curated)
         passed, reason = Curator.validate(output)
@@ -157,7 +173,11 @@ class CuratorTests(unittest.TestCase):
             "curator.urllib.request.urlopen",
             return_value=FakeResponse(make_api_text_response(model_text)),
         ):
-            output = Curator(env_path=self.env_path, prompt_path=self.prompt_path).run([])
+            output = Curator(
+                endpoint=self.gemini_endpoint,
+                env_path=self.env_path,
+                prompt_path=self.prompt_path,
+            ).run([])
 
         self.assertEqual(output, curated)
         passed, reason = Curator.validate(output)
@@ -169,7 +189,11 @@ class CuratorTests(unittest.TestCase):
             return_value=FakeResponse(make_api_text_response("A ranked list would go here.")),
         ):
             with self.assertRaisesRegex(CuratorError, "Invalid Gemini API curation response"):
-                Curator(env_path=self.env_path, prompt_path=self.prompt_path).run([])
+                Curator(
+                    endpoint=self.gemini_endpoint,
+                    env_path=self.env_path,
+                    prompt_path=self.prompt_path,
+                ).run([])
 
     def test_rejects_malformed_curator_structured_data(self):
         with patch(
@@ -177,7 +201,11 @@ class CuratorTests(unittest.TestCase):
             return_value=FakeResponse(make_api_text_response('[{"title": "A"')),
         ):
             with self.assertRaisesRegex(CuratorError, "Invalid Gemini API curation response"):
-                Curator(env_path=self.env_path, prompt_path=self.prompt_path).run([])
+                Curator(
+                    endpoint=self.gemini_endpoint,
+                    env_path=self.env_path,
+                    prompt_path=self.prompt_path,
+                ).run([])
 
     def test_validation_succeeds_for_one_complete_curated_item(self):
         output = [make_curated_item(1)]
@@ -313,7 +341,11 @@ class CuratorTests(unittest.TestCase):
             side_effect=urllib.error.URLError("service unavailable"),
         ):
             with self.assertRaisesRegex(CuratorError, "Gemini API curation failed"):
-                Curator(env_path=self.env_path, prompt_path=self.prompt_path).run([])
+                Curator(
+                    endpoint=self.gemini_endpoint,
+                    env_path=self.env_path,
+                    prompt_path=self.prompt_path,
+                ).run([])
 
     def test_openai_api_errors_are_reported_with_provider_context(self):
         self.env_path.write_text("OPENAI_API_KEY=openai-key\n", encoding="utf-8")
@@ -326,6 +358,7 @@ class CuratorTests(unittest.TestCase):
                 Curator(
                     provider="openai",
                     model="gpt-4.1-mini",
+                    endpoint=self.openai_endpoint,
                     env_path=self.env_path,
                     prompt_path=self.prompt_path,
                 ).run([])
@@ -335,6 +368,7 @@ class CuratorTests(unittest.TestCase):
             Curator(
                 provider="openai",
                 model="gpt-4.1-mini",
+                endpoint=self.openai_endpoint,
                 env_path=self.env_path,
                 prompt_path=self.prompt_path,
             ).run([])
@@ -343,6 +377,7 @@ class CuratorTests(unittest.TestCase):
         with self.assertRaisesRegex(CuratorError, "Unsupported Curator model provider"):
             Curator(
                 provider="other",
+                endpoint=self.gemini_endpoint,
                 env_path=self.env_path,
                 prompt_path=self.prompt_path,
             ).run([])
@@ -355,7 +390,11 @@ class CuratorTests(unittest.TestCase):
             return_value=FakeResponse(bad_response),
         ):
             with self.assertRaisesRegex(CuratorError, "Invalid Gemini API curation response"):
-                Curator(env_path=self.env_path, prompt_path=self.prompt_path).run([])
+                Curator(
+                    endpoint=self.gemini_endpoint,
+                    env_path=self.env_path,
+                    prompt_path=self.prompt_path,
+                ).run([])
 
     def test_loads_configured_prompt_at_run_time(self):
         self.prompt_path.write_text("updated curator prompt", encoding="utf-8")
@@ -363,7 +402,11 @@ class CuratorTests(unittest.TestCase):
             "curator.urllib.request.urlopen",
             return_value=FakeResponse(make_api_response([make_curated_item(1)])),
         ) as urlopen:
-            Curator(env_path=self.env_path, prompt_path=self.prompt_path).run([])
+            Curator(
+                endpoint=self.gemini_endpoint,
+                env_path=self.env_path,
+                prompt_path=self.prompt_path,
+            ).run([])
 
         request_body = json.loads(urlopen.call_args.args[0].data)
         self.assertIn("updated curator prompt", request_body["contents"][0]["parts"][0]["text"])
@@ -372,12 +415,20 @@ class CuratorTests(unittest.TestCase):
         missing_path = Path(self.temporary_directory.name) / "missing.md"
 
         with self.assertRaisesRegex(CuratorError, "could not be loaded.*does not exist"):
-            Curator(env_path=self.env_path, prompt_path=missing_path).run([])
+            Curator(
+                endpoint=self.gemini_endpoint,
+                env_path=self.env_path,
+                prompt_path=missing_path,
+            ).run([])
 
     def test_unreadable_prompt_file_reports_failure(self):
         with patch("prompt_loader.Path.read_text", side_effect=PermissionError("denied")):
             with self.assertRaisesRegex(CuratorError, "could not be read.*denied"):
-                Curator(env_path=self.env_path, prompt_path=self.prompt_path).run([])
+                Curator(
+                    endpoint=self.gemini_endpoint,
+                    env_path=self.env_path,
+                    prompt_path=self.prompt_path,
+                ).run([])
 
 
 if __name__ == "__main__":

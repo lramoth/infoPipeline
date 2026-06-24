@@ -15,8 +15,6 @@ from structured_output import StructuredOutputError, extract_json_payload
 
 
 GEMINI_MODEL = "gemini-2.5-flash"
-GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
-OPENAI_ENDPOINT = "https://api.openai.com/v1/responses"
 PROVIDER_GEMINI = "gemini"
 PROVIDER_OPENAI = "openai"
 PROVIDER_NAMES = {
@@ -35,15 +33,13 @@ class Researcher:
     def __init__(
         self,
         prompt_path: str | Path,
+        endpoint: str,
         provider: str = PROVIDER_GEMINI,
         model: str = GEMINI_MODEL,
-        endpoint: str = GEMINI_ENDPOINT,
         env_path: str | Path = PROJECT_ENV_PATH,
     ) -> None:
         self.provider = provider
         self.model = model
-        if provider == PROVIDER_OPENAI and endpoint == GEMINI_ENDPOINT:
-            endpoint = OPENAI_ENDPOINT
         self.endpoint = endpoint.rstrip("/")
         self.env_path = Path(env_path)
         self.prompt_path = Path(prompt_path)

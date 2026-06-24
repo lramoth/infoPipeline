@@ -47,6 +47,8 @@ class ResearcherTests(unittest.TestCase):
         self.env_path.write_text("GEMINI_API_KEY=test-key\n", encoding="utf-8")
         self.prompt_path = Path(self.temporary_directory.name) / "research.md"
         self.prompt_path.write_text("custom research prompt", encoding="utf-8")
+        self.gemini_endpoint = "https://gemini.example/v1beta/models"
+        self.openai_endpoint = "https://openai.example/responses"
 
     def tearDown(self):
         self.temporary_directory.cleanup()
@@ -72,9 +74,17 @@ class ResearcherTests(unittest.TestCase):
             "researcher.urllib.request.urlopen",
             return_value=FakeResponse(json.dumps(response).encode("utf-8")),
         ) as urlopen:
-            output = Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
+            output = Researcher(
+                endpoint=self.gemini_endpoint,
+                env_path=self.env_path,
+                prompt_path=self.prompt_path,
+            ).run()
 
         request = urlopen.call_args.args[0]
+        self.assertEqual(
+            request.full_url,
+            "https://gemini.example/v1beta/models/gemini-2.5-flash:generateContent",
+        )
         self.assertEqual(request.headers["X-goog-api-key"], "test-key")
         request_body = json.loads(request.data)
         self.assertEqual(request_body["contents"][0]["parts"][0]["text"], "custom research prompt")
@@ -96,12 +106,13 @@ class ResearcherTests(unittest.TestCase):
             output = Researcher(
                 provider="openai",
                 model="gpt-4.1-mini",
+                endpoint=self.openai_endpoint,
                 env_path=self.env_path,
                 prompt_path=self.prompt_path,
             ).run()
 
         request = urlopen.call_args.args[0]
-        self.assertEqual(request.full_url, "https://api.openai.com/v1/responses")
+        self.assertEqual(request.full_url, self.openai_endpoint)
         self.assertEqual(request.headers["Authorization"], "Bearer openai-key")
         request_body = json.loads(request.data)
         self.assertEqual(request_body["model"], "gpt-4.1-mini")
@@ -125,6 +136,7 @@ class ResearcherTests(unittest.TestCase):
             output = Researcher(
                 provider="openai",
                 model="gpt-4.1-mini",
+                endpoint=self.openai_endpoint,
                 env_path=self.env_path,
                 prompt_path=self.prompt_path,
             ).run()
@@ -142,7 +154,11 @@ class ResearcherTests(unittest.TestCase):
             "researcher.urllib.request.urlopen",
             return_value=FakeResponse(make_api_response(model_text)),
         ):
-            output = Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
+            output = Researcher(
+                endpoint=self.gemini_endpoint,
+                env_path=self.env_path,
+                prompt_path=self.prompt_path,
+            ).run()
 
         self.assertEqual(output["items"], items)
         passed, reason = Researcher.validate(output)
@@ -159,7 +175,11 @@ class ResearcherTests(unittest.TestCase):
             "researcher.urllib.request.urlopen",
             return_value=FakeResponse(make_api_response(model_text)),
         ):
-            output = Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
+            output = Researcher(
+                endpoint=self.gemini_endpoint,
+                env_path=self.env_path,
+                prompt_path=self.prompt_path,
+            ).run()
 
         self.assertEqual(output["items"], items)
         passed, reason = Researcher.validate(output)
@@ -171,7 +191,11 @@ class ResearcherTests(unittest.TestCase):
             return_value=FakeResponse(make_api_response("Here are three useful articles.")),
         ):
             with self.assertRaisesRegex(ResearcherError, "Invalid Gemini API search response"):
-                Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
+                Researcher(
+                    endpoint=self.gemini_endpoint,
+                    env_path=self.env_path,
+                    prompt_path=self.prompt_path,
+                ).run()
 
     def test_rejects_malformed_research_structured_data(self):
         with patch(
@@ -179,7 +203,11 @@ class ResearcherTests(unittest.TestCase):
             return_value=FakeResponse(make_api_response('[{"title": "A"')),
         ):
             with self.assertRaisesRegex(ResearcherError, "Invalid Gemini API search response"):
-                Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
+                Researcher(
+                    endpoint=self.gemini_endpoint,
+                    env_path=self.env_path,
+                    prompt_path=self.prompt_path,
+                ).run()
 
     def test_validation_succeeds_for_at_least_three_complete_items(self):
         output = {
@@ -221,7 +249,11 @@ class ResearcherTests(unittest.TestCase):
             side_effect=urllib.error.URLError("service unavailable"),
         ):
             with self.assertRaisesRegex(ResearcherError, "Gemini API search failed"):
-                Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
+                Researcher(
+                    endpoint=self.gemini_endpoint,
+                    env_path=self.env_path,
+                    prompt_path=self.prompt_path,
+                ).run()
 
     def test_openai_api_errors_are_reported_with_provider_context(self):
         self.env_path.write_text("OPENAI_API_KEY=openai-key\n", encoding="utf-8")
@@ -234,6 +266,7 @@ class ResearcherTests(unittest.TestCase):
                 Researcher(
                     provider="openai",
                     model="gpt-4.1-mini",
+                    endpoint=self.openai_endpoint,
                     env_path=self.env_path,
                     prompt_path=self.prompt_path,
                 ).run()
@@ -243,6 +276,7 @@ class ResearcherTests(unittest.TestCase):
             Researcher(
                 provider="openai",
                 model="gpt-4.1-mini",
+                endpoint=self.openai_endpoint,
                 env_path=self.env_path,
                 prompt_path=self.prompt_path,
             ).run()
@@ -251,6 +285,7 @@ class ResearcherTests(unittest.TestCase):
         with self.assertRaisesRegex(ResearcherError, "Unsupported Researcher model provider"):
             Researcher(
                 provider="other",
+                endpoint=self.gemini_endpoint,
                 env_path=self.env_path,
                 prompt_path=self.prompt_path,
             ).run()
@@ -259,12 +294,20 @@ class ResearcherTests(unittest.TestCase):
         missing_path = Path(self.temporary_directory.name) / "missing.md"
 
         with self.assertRaisesRegex(ResearcherError, "could not be loaded.*does not exist"):
-            Researcher(env_path=self.env_path, prompt_path=missing_path).run()
+            Researcher(
+                endpoint=self.gemini_endpoint,
+                env_path=self.env_path,
+                prompt_path=missing_path,
+            ).run()
 
     def test_unreadable_prompt_file_reports_failure(self):
         with patch("prompt_loader.Path.read_text", side_effect=PermissionError("denied")):
             with self.assertRaisesRegex(ResearcherError, "could not be read.*denied"):
-                Researcher(env_path=self.env_path, prompt_path=self.prompt_path).run()
+                Researcher(
+                    endpoint=self.gemini_endpoint,
+                    env_path=self.env_path,
+                    prompt_path=self.prompt_path,
+                ).run()
 
 
 if __name__ == "__main__":

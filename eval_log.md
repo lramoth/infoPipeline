@@ -455,3 +455,17 @@
 - Scenario 11, Automated Tests Avoid Live External Calls: PASS — all 123 repository tests pass using controlled mocked provider responses; provider switching behavior is covered for both Researcher and Curator; no live Gemini, OpenAI, Ollama, or Telegram call is required.
 - Scenario 12, Live Provider Smoke Check: SKIP — live-provider credentials are not available in this evaluation session; live-provider confirmation was not run and is not treated as evidence of live-provider behavior.
 - Overall verdict: PASS — all eleven evaluated scenarios pass; Scenario 12 is explicitly skipped due to unavailable live credentials.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/configured_model_endpoints_feature.md`.
+- Summary of work completed: The default pipeline configuration now declares endpoints for Researcher, Curator, and Writer. Configured model entries must include a non-empty string endpoint before stages are assembled, and configured stages use the declared endpoint when attempting provider calls. Existing provider support and stage output contracts remain unchanged, and automated tests cover endpoint behavior without live external service calls.
+- Assumptions made: Direct stage construction can still supply endpoints explicitly for controlled tests and non-configured use. The configured Gemini endpoint is the shared Gemini model service base URL for Researcher and Curator, the OpenAI endpoint is the Responses API URL when OpenAI is selected, and the Writer endpoint remains the local Ollama generation URL. No new dependencies were added.
+- Gaps or suspected bugs: Real Gemini, OpenAI, Ollama, and Telegram endpoints were not called during implementation; live endpoint confirmation remains for a separate evaluation session.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/configured_model_endpoints_feature.md`.
+- Summary of work completed: Removed remaining source-level Researcher and Curator endpoint defaults so those stages no longer embed Gemini or OpenAI service endpoints in code. Configured pipeline assembly now requires every configured model-backed stage to provide a model object with provider, name, and endpoint, and controlled tests pass endpoints explicitly when constructing stages directly.
+- Assumptions made: Direct stage construction remains allowed when callers provide an endpoint explicitly. Model names remain as existing constructor defaults for direct construction because this review focused on endpoint ownership. No new dependencies were added.
+- Gaps or suspected bugs: Real provider endpoints were not called during this review fix.

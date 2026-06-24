@@ -183,27 +183,21 @@ def _assemble_stage(
         constructor_args["template_path"] = resolved_template_path
 
     model = entry.get("model")
-    if model is not None:
-        if not isinstance(model, dict):
-            raise PipelineConfigError(f"Model for stage {name} must be an object")
-        for required_field in ("provider", "name"):
-            if not isinstance(model.get(required_field), str) or not model[required_field]:
-                raise PipelineConfigError(
-                    f"Model for stage {name} is missing required field: {required_field}"
-                )
-        provider = model["provider"]
-        if provider not in SUPPORTED_STAGE_PROVIDERS[name]:
+    if not isinstance(model, dict):
+        raise PipelineConfigError(f"Model for stage {name} must be an object")
+    for required_field in ("provider", "name", "endpoint"):
+        if not isinstance(model.get(required_field), str) or not model[required_field]:
             raise PipelineConfigError(
-                f"Unsupported model provider for stage {name}: {provider}"
+                f"Model for stage {name} is missing required field: {required_field}"
             )
-        constructor_args["provider"] = provider
-        constructor_args["model"] = model["name"]
-        if "endpoint" in model:
-            if not isinstance(model["endpoint"], str) or not model["endpoint"]:
-                raise PipelineConfigError(
-                    f"Model endpoint for stage {name} must be a non-empty string"
-                )
-            constructor_args["endpoint"] = model["endpoint"]
+    provider = model["provider"]
+    if provider not in SUPPORTED_STAGE_PROVIDERS[name]:
+        raise PipelineConfigError(
+            f"Unsupported model provider for stage {name}: {provider}"
+        )
+    constructor_args["provider"] = provider
+    constructor_args["model"] = model["name"]
+    constructor_args["endpoint"] = model["endpoint"]
 
     return STAGE_TYPES[name](**constructor_args)
 

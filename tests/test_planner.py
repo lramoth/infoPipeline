@@ -380,7 +380,11 @@ class PlannerTests(unittest.TestCase):
             result = Planner(
                 [
                     Stage("researcher", lambda: [], lambda output: (True, "passed")),
-                    Curator(env_path=env_path, prompt_path=prompt_path),
+                    Curator(
+                        endpoint="https://gemini.example/v1beta/models",
+                        env_path=env_path,
+                        prompt_path=prompt_path,
+                    ),
                 ],
                 self.ledger_path,
             ).run()
@@ -409,7 +413,11 @@ class PlannerTests(unittest.TestCase):
             result = Planner(
                 [
                     Stage("researcher", lambda: [], lambda output: (True, "passed")),
-                    Curator(env_path=env_path, prompt_path=prompt_path),
+                    Curator(
+                        endpoint="https://gemini.example/v1beta/models",
+                        env_path=env_path,
+                        prompt_path=prompt_path,
+                    ),
                 ],
                 self.ledger_path,
             ).run()
