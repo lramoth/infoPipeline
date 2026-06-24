@@ -9,8 +9,8 @@ outbound message, and delivers it via Telegram every morning.
 
 ## Components
 
-Four conceptual pieces. Only three involve an LLM call — the fourth is
-plain code.
+Five conceptual pieces. Only three involve an LLM call — the Planner and
+Delivery pieces are plain code.
 
 - **Planner** (pure Python — no LLM) — coordinates the pipeline. Reads and
   writes a JSON task ledger, validates each stage's output before
@@ -25,6 +25,9 @@ plain code.
 - **Writer** (local `gemma4:e4b` via Ollama) — formats the curator's
   ranked, reasoned list into the final outbound message. Not a hard
   reasoning task — local is fine.
+- **Delivery** (plain Python) — transports the final outbound message to
+  enabled delivery providers after all configured stages succeed. Telegram
+  is the first provider.
 
 ## Data flow
 
@@ -42,15 +45,18 @@ Planner ──▶ Researcher ──▶ Curator ──▶ Writer
               └──────────────┴───────────┘
                           │
                           ▼
-                   Planner marks done,
-                      advances
+                   Planner marks stages done
                           │
                           ▼
-          Outbound message sent via Telegram
+          Delivery sends outbound message via Telegram
 ```
 
 Each stage is validated before the next runs. A failed check halts the
 pipeline at that stage rather than passing bad output forward.
+
+Delivery runs only after all configured stages have completed successfully.
+Delivery is recorded separately from stage results and does not generate,
+edit, rank, filter, or summarize the Writer's outbound message.
 
 ## External dependencies
 
@@ -74,6 +80,14 @@ The output/ledger.json is a record of each stage's status, output and validation
       "validation_reason": "<why it passed or failed>",
       "timestamp": "<ISO 8601>",
       "diagnostic_path": "<Failure responses returned by external services>"
+    }
+  },
+  "delivery": {
+    "<provider_name>": {
+      "provider": "<provider_name>",
+      "status": "done" | "failed",
+      "reason": "<delivery result or failure reason>",
+      "timestamp": "<ISO 8601>"
     }
   }
 }

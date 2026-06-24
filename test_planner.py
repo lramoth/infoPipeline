@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from curator import Curator
+from delivery import DeliveryResult
 from planner import Planner, RunResult, Stage, main
 from writer import Writer
 
@@ -20,6 +21,21 @@ class FakeResponse(io.BytesIO):
 
     def __exit__(self, *args):
         self.close()
+
+
+class FakeDelivery:
+    name = "telegram"
+
+    def __init__(self, events=None, result=None, error=None):
+        self.events = events if events is not None else []
+        self.result = result or DeliveryResult("telegram", True, "sent")
+        self.error = error
+
+    def deliver(self, message):
+        self.events.append(("delivery", message))
+        if self.error is not None:
+            raise self.error
+        return self.result
 
 
 class PlannerTests(unittest.TestCase):
@@ -118,6 +134,80 @@ class PlannerTests(unittest.TestCase):
             ],
         )
 
+    def test_delivery_runs_after_writer_success_with_writer_output(self):
+        events = []
+
+        result = Planner(
+            [
+                Stage("researcher", lambda: "research", lambda output: (True, "passed")),
+                Stage("writer", lambda output: "final message", lambda output: (True, "passed")),
+            ],
+            self.ledger_path,
+            delivery_providers=[FakeDelivery(events)],
+        ).run()
+
+        self.assertTrue(result.succeeded)
+        self.assertEqual(result.output, "final message")
+        self.assertEqual(events, [("delivery", "final message")])
+        ledger = self.read_ledger()
+        self.assertEqual(ledger["stages"]["writer"]["output"], "final message")
+        self.assertEqual(ledger["delivery"]["telegram"]["provider"], "telegram")
+        self.assertEqual(ledger["delivery"]["telegram"]["status"], "done")
+        self.assertEqual(ledger["delivery"]["telegram"]["reason"], "sent")
+        self.assertNotIn("telegram", ledger["stages"])
+
+    def test_delivery_does_not_run_when_stage_fails(self):
+        events = []
+
+        result = Planner(
+            [
+                Stage("bad", lambda: "bad output", lambda output: (False, "failed")),
+                Stage("writer", lambda output: "final message", lambda output: (True, "passed")),
+            ],
+            self.ledger_path,
+            delivery_providers=[FakeDelivery(events)],
+        ).run()
+
+        self.assertFalse(result.succeeded)
+        self.assertEqual(result.failed_stage, "bad")
+        self.assertEqual(events, [])
+        self.assertNotIn("delivery", self.read_ledger())
+
+    def test_disabled_delivery_providers_do_not_run(self):
+        events = []
+
+        result = Planner(
+            [
+                Stage("writer", lambda: "final message", lambda output: (True, "passed")),
+            ],
+            self.ledger_path,
+            delivery_providers=[],
+        ).run()
+
+        self.assertTrue(result.succeeded)
+        self.assertEqual(result.output, "final message")
+        self.assertEqual(events, [])
+        self.assertNotIn("delivery", self.read_ledger())
+
+    def test_delivery_failure_is_reported_without_failing_writer_stage(self):
+        result = Planner(
+            [
+                Stage("writer", lambda: "final message", lambda output: (True, "passed")),
+            ],
+            self.ledger_path,
+            delivery_providers=[FakeDelivery(error=RuntimeError("network down"))],
+        ).run()
+
+        self.assertFalse(result.succeeded)
+        self.assertEqual(result.output, "final message")
+        self.assertEqual(result.failed_delivery, "telegram")
+        self.assertIn("network down", result.reason)
+        ledger = self.read_ledger()
+        self.assertEqual(ledger["stages"]["writer"]["status"], "done")
+        self.assertEqual(ledger["stages"]["writer"]["output"], "final message")
+        self.assertEqual(ledger["delivery"]["telegram"]["status"], "failed")
+        self.assertIn("network down", ledger["delivery"]["telegram"]["reason"])
+
     def test_validation_can_use_the_input_given_to_the_current_stage(self):
         validator_seen_input = None
 
@@ -143,10 +233,12 @@ class PlannerTests(unittest.TestCase):
             Stage("writer", lambda output: "final output", lambda output: (True, "writer passed")),
         ]
 
-        with patch("planner.load_pipeline", return_value=configured_stages) as load_pipeline:
+        with patch("planner.load_pipeline", return_value=configured_stages) as load_pipeline, \
+            patch("planner.load_delivery_config", return_value=[]) as load_delivery_config:
             result = Planner(ledger_path=self.ledger_path).run()
 
         load_pipeline.assert_called_once_with()
+        load_delivery_config.assert_called_once_with()
         self.assertTrue(result.succeeded)
         self.assertEqual(result.output, "final output")
         self.assertEqual(
@@ -398,6 +490,25 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "")
         self.assertIn("Pipeline failed at writer: bad format", stderr.getvalue())
+
+    def test_cli_reports_delivery_failure_separately_from_stage_failure(self):
+        stdout = StringIO()
+        stderr = StringIO()
+        with patch.object(
+            Planner,
+            "run",
+            return_value=RunResult(
+                False,
+                "final message",
+                failed_delivery="telegram",
+                reason="network down",
+            ),
+        ), redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main()
+
+        self.assertEqual(exit_code, 1)
+        self.assertEqual(stdout.getvalue(), "final message\n")
+        self.assertIn("Delivery failed for telegram: network down", stderr.getvalue())
 
     def test_cli_prints_readable_error_and_exits_nonzero_on_startup_error(self):
         stdout = StringIO()

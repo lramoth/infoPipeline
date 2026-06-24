@@ -284,3 +284,10 @@
 - Scenario 7, Runtime Message Generation Behavior Is Preserved: PASS — the Writer returns a non-empty final message string under a controlled local-model response, no Telegram API call is made during message generation, and no new Delivery stage or delivery module is required to generate the message.
 - Scenario 8, Repository Tests Still Pass: PASS — all 78 repository tests pass without live external service calls after the terminology and prompt-path updates.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/delivery_stage_feature.md`.
+- Summary of work completed: The pipeline can now configure Telegram delivery separately from content stages, runs enabled delivery only after a successful final outbound message is produced, leaves the outbound message as the run output and command-line stdout on success, records delivery results separately from stage results, reports delivery failures separately from stage failures, and skips disabled delivery providers. Telegram delivery sends the outbound message to the configured Telegram destination without changing the message.
+- Assumptions made: A delivery failure makes the overall run fail while preserving the generated outbound message as the run output; the command-line entry point prints that generated message to stdout and reports the delivery failure to stderr. Injected custom stage lists keep delivery disabled unless providers are explicitly supplied, while the default configured pipeline loads delivery from `config/pipeline.yaml`. No new dependencies were added.
+- Gaps or suspected bugs: None.

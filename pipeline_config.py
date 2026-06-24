@@ -8,6 +8,7 @@ from typing import Any
 import yaml
 
 from curator import Curator
+from delivery import TelegramDelivery
 from researcher import Researcher
 from writer import Writer
 
@@ -19,6 +20,9 @@ STAGE_TYPES = {
     "researcher": Researcher,
     "curator": Curator,
     "writer": Writer,
+}
+DELIVERY_TYPES = {
+    "telegram": TelegramDelivery,
 }
 
 
@@ -39,6 +43,23 @@ def load_pipeline_config() -> list[Researcher | Curator | Writer]:
 def load_pipeline() -> list[Researcher | Curator | Writer]:
     """Return the stages assembled from the project's pipeline configuration."""
     return load_pipeline_config()
+
+
+def load_delivery_config() -> list[TelegramDelivery]:
+    """Return enabled delivery providers from the project's pipeline configuration."""
+    config = _read_config()
+    delivery_entries = config.get("delivery", []) if isinstance(config, dict) else []
+    if delivery_entries is None:
+        return []
+    if not isinstance(delivery_entries, list):
+        raise PipelineConfigError("Pipeline configuration delivery section must be a list")
+
+    providers = []
+    for index, entry in enumerate(delivery_entries):
+        provider = _assemble_delivery_provider(entry, index)
+        if provider is not None:
+            providers.append(provider)
+    return providers
 
 
 def _read_config() -> Any:
@@ -96,3 +117,26 @@ def _assemble_stage(entry: Any, index: int) -> Researcher | Curator | Writer:
             constructor_args["endpoint"] = model["endpoint"]
 
     return STAGE_TYPES[name](**constructor_args)
+
+
+def _assemble_delivery_provider(entry: Any, index: int) -> TelegramDelivery | None:
+    if not isinstance(entry, dict):
+        raise PipelineConfigError(f"Delivery entry {index} must be an object")
+
+    provider_name = entry.get("provider")
+    if not isinstance(provider_name, str) or not provider_name:
+        raise PipelineConfigError(
+            f"Delivery entry {index} is missing required field: provider"
+        )
+    if provider_name not in DELIVERY_TYPES:
+        raise PipelineConfigError(f"Unknown delivery provider: {provider_name}")
+
+    enabled = entry.get("enabled")
+    if not isinstance(enabled, bool):
+        raise PipelineConfigError(
+            f"Delivery provider {provider_name} is missing required boolean field: enabled"
+        )
+    if not enabled:
+        return None
+
+    return DELIVERY_TYPES[provider_name]()

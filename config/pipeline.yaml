@@ -15,3 +15,7 @@ stages:
       provider: ollama
       name: gemma4:e4b
       endpoint: http://localhost:11434/api/generate
+
+delivery:
+  - provider: telegram
+    enabled: true

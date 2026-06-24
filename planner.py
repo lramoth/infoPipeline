@@ -10,8 +10,9 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable
 
+from delivery import DeliveryResult
 from diagnostics import write_diagnostic
-from pipeline_config import load_pipeline
+from pipeline_config import load_delivery_config, load_pipeline
 
 
 ValidationResult = tuple[bool, str]
@@ -34,6 +35,8 @@ class RunResult:
     output: Any = None
     failed_stage: str | None = None
     reason: str | None = None
+    failed_delivery: str | None = None
+    delivery_results: list[DeliveryResult] | None = None
 
 
 class Planner:
@@ -43,8 +46,16 @@ class Planner:
         self,
         stages: Iterable[Any] | None = None,
         ledger_path: str | Path = "output/ledger.json",
+        delivery_providers: Iterable[Any] | None = None,
     ) -> None:
-        self.stages = list(load_pipeline() if stages is None else stages)
+        using_default_pipeline = stages is None
+        self.stages = list(load_pipeline() if using_default_pipeline else stages)
+        if delivery_providers is None:
+            self.delivery_providers = list(
+                load_delivery_config() if using_default_pipeline else []
+            )
+        else:
+            self.delivery_providers = list(delivery_providers)
         self.ledger_path = Path(ledger_path)
 
     def run(self) -> RunResult:
@@ -83,7 +94,21 @@ class Planner:
                 return RunResult(False, output, stage_name, reason)
             previous_output = output
 
-        return RunResult(True, previous_output)
+        delivery_results = self._deliver(ledger, previous_output)
+        failed_delivery = next(
+            (result for result in delivery_results if not result.succeeded),
+            None,
+        )
+        if failed_delivery is not None:
+            return RunResult(
+                False,
+                previous_output,
+                failed_delivery=failed_delivery.provider,
+                reason=failed_delivery.reason,
+                delivery_results=delivery_results,
+            )
+
+        return RunResult(True, previous_output, delivery_results=delivery_results)
 
     def _load_ledger(self, today: str) -> dict[str, Any]:
         if self.ledger_path.exists():
@@ -111,6 +136,42 @@ class Planner:
         if diagnostic_path is not None:
             entry["diagnostic_path"] = str(diagnostic_path)
         ledger["stages"][stage_name] = entry
+        self.ledger_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.ledger_path.open("w", encoding="utf-8") as ledger_file:
+            json.dump(ledger, ledger_file, indent=2)
+            ledger_file.write("\n")
+
+    def _deliver(
+        self,
+        ledger: dict[str, Any],
+        message: Any,
+    ) -> list[DeliveryResult]:
+        results = []
+        for provider in self.delivery_providers:
+            provider_name = self._delivery_provider_name(provider)
+            try:
+                result = provider.deliver(message)
+                if not isinstance(result, DeliveryResult):
+                    result = DeliveryResult(provider_name, True, "Delivery succeeded")
+            except Exception as error:
+                reason = f"{type(error).__name__}: {error}"
+                result = DeliveryResult(provider_name, False, reason)
+            self._record_delivery(ledger, result)
+            results.append(result)
+        return results
+
+    def _record_delivery(
+        self,
+        ledger: dict[str, Any],
+        result: DeliveryResult,
+    ) -> None:
+        entry = {
+            "provider": result.provider,
+            "status": "done" if result.succeeded else "failed",
+            "reason": result.reason,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        ledger.setdefault("delivery", {})[result.provider] = entry
         self.ledger_path.parent.mkdir(parents=True, exist_ok=True)
         with self.ledger_path.open("w", encoding="utf-8") as ledger_file:
             json.dump(ledger, ledger_file, indent=2)
@@ -174,6 +235,9 @@ class Planner:
 
     def _stage_name(self, stage: Any) -> str:
         return getattr(stage, "name", stage.__class__.__name__.lower())
+
+    def _delivery_provider_name(self, provider: Any) -> str:
+        return getattr(provider, "name", provider.__class__.__name__.lower())
 
     def _run_stage(self, stage: Any, stage_input: Any, is_first_stage: bool) -> Any:
         run = stage.run
@@ -240,6 +304,14 @@ def main() -> int:
     if result.succeeded:
         print(_format_cli_output(result.output))
         return 0
+
+    if result.failed_delivery:
+        print(_format_cli_output(result.output))
+        print(
+            f"Delivery failed for {result.failed_delivery}: {result.reason}",
+            file=sys.stderr,
+        )
+        return 1
 
     failed_stage = result.failed_stage or "unknown stage"
     reason = result.reason or "no failure reason provided"

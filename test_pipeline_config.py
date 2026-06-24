@@ -5,7 +5,8 @@ from unittest.mock import patch
 
 import pipeline_config
 from curator import Curator
-from pipeline_config import PipelineConfigError, load_pipeline
+from delivery import TelegramDelivery
+from pipeline_config import PipelineConfigError, load_delivery_config, load_pipeline
 from researcher import Researcher
 from writer import Writer
 
@@ -120,6 +121,61 @@ class PipelineConfigTests(unittest.TestCase):
         with self.assertRaisesRegex(PipelineConfigError, "name"):
             load_pipeline()
 
+    def test_enabled_telegram_delivery_is_loaded_separately_from_stages(self):
+        self.write_config(
+            """stages:
+  - name: writer
+    prompt_path: prompts/writers/outbound_brief.md
+delivery:
+  - provider: telegram
+    enabled: true
+"""
+        )
+
+        providers = load_delivery_config()
+
+        self.assertEqual([type(provider) for provider in providers], [TelegramDelivery])
+
+    def test_disabled_delivery_provider_is_not_loaded(self):
+        self.write_config(
+            """stages:
+  - name: writer
+    prompt_path: prompts/writers/outbound_brief.md
+delivery:
+  - provider: telegram
+    enabled: false
+"""
+        )
+
+        self.assertEqual(load_delivery_config(), [])
+
+    def test_delivery_section_must_be_a_list(self):
+        self.write_config(
+            """stages:
+  - name: writer
+    prompt_path: prompts/writers/outbound_brief.md
+delivery:
+  provider: telegram
+  enabled: true
+"""
+        )
+
+        with self.assertRaisesRegex(PipelineConfigError, "delivery section"):
+            load_delivery_config()
+
+    def test_delivery_provider_requires_enabled_flag(self):
+        self.write_config(
+            """stages:
+  - name: writer
+    prompt_path: prompts/writers/outbound_brief.md
+delivery:
+  - provider: telegram
+"""
+        )
+
+        with self.assertRaisesRegex(PipelineConfigError, "enabled"):
+            load_delivery_config()
+
 
 class DefaultPipelineConfigTests(unittest.TestCase):
     def test_default_config_defines_required_stage_order_and_prompts(self):
@@ -134,6 +190,11 @@ class DefaultPipelineConfigTests(unittest.TestCase):
                 "prompts/writers/outbound_brief.md",
             ],
         )
+
+    def test_default_config_defines_enabled_telegram_delivery(self):
+        providers = load_delivery_config()
+
+        self.assertEqual([type(provider) for provider in providers], [TelegramDelivery])
 
 
 if __name__ == "__main__":
