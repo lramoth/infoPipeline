@@ -356,3 +356,18 @@
 - Summary of work completed: The default pipeline now supplies both Writer prompt and Writer template paths from configuration, and valid configured paths continue to let Writer generate the same outbound message behavior. Missing Writer prompt paths, missing Writer template paths, nonexistent prompt files, and nonexistent template files are rejected during configuration loading with readable errors. Existing Researcher and Curator configured prompt-path behavior continues to pass.
 - Assumptions made: Direct construction of Writer requires explicit prompt and template paths because both path selections are now configuration responsibilities. Existing Writer prompt and template filenames and content were left unchanged because the spec excluded renaming or content changes. No new dependencies were added.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-24
+
+- Eval file used: `evals/config_owned_writer_paths_feature.eval.md`.
+- Scenario 1, Default Pipeline Uses Configured Writer Paths: PASS — the default pipeline loads Writer with the prompt path and template path declared in the pipeline configuration, both declared paths point to existing files, and Researcher and Curator configured prompt-path behavior is unchanged.
+- Scenario 2, Default Writer Configuration Includes Template Path: PASS — the default Writer stage entry in the pipeline configuration declares both a non-empty prompt path and a non-empty template path.
+- Scenario 3, Source-Level Writer Path Fallbacks Are Removed: PASS — the Writer source defines no module-level default prompt path and no module-level default template path; both paths must be supplied explicitly with no source-level fallback.
+- Scenario 4, Configured Writer Prompt And Template Loading Still Works: PASS — Writer loads the supplied prompt at runtime, sends its content to the configured local model endpoint, loads the supplied template, and assembles the outbound message from the template and curated items without requiring any source-level path default.
+- Scenario 5, Missing Writer Prompt Path Remains A Configuration Error: PASS — a Writer stage missing its prompt path in pipeline configuration causes loading to fail with a readable configuration error, and no implicit source-level fallback is applied.
+- Scenario 6, Missing Writer Template Path Is A Configuration Error: PASS — a Writer stage missing its template path in pipeline configuration causes loading to fail with a readable configuration error, and no implicit source-level fallback is applied.
+- Scenario 7, Missing Configured Writer Prompt File Remains A Configuration Error: PASS — a Writer stage whose declared prompt path points to a nonexistent file causes loading to fail with a readable configuration error, and no implicit source-level fallback is applied.
+- Scenario 8, Missing Configured Writer Template File Is A Configuration Error: PASS — a Writer stage whose declared template path points to a nonexistent file causes loading to fail with a readable configuration error, and no implicit source-level fallback is applied.
+- Scenario 9, Existing Stage Boundaries Remain Unchanged: PASS — Writer uses the local model endpoint for item prose generation, preserves curated titles and source URLs in the outbound message, makes no Gemini API call, and does not invoke delivery behavior during outbound message generation.
+- Scenario 10, Repository Tests Still Pass Without Live External Calls: PASS — all 103 repository tests pass; Writer prompt loading, template assembly, configured path behavior, missing path and missing file failure conditions, and Researcher and Curator configured prompt-path behavior are all covered without any live Gemini, Ollama, or Telegram call.
+- Overall verdict: PASS.
