@@ -45,6 +45,37 @@ Prompt and template paths are supplied through configuration rather than Python
 source defaults. This keeps Researcher, Curator, and Writer reusable across
 topics and presentations without changing source code.
 
+Model settings use the same `model` shape for each configured stage. Gemini and
+OpenAI are supported for Researcher and Curator stages; Ollama is currently
+supported for the Writer stage.
+
+Gemini-backed Researcher or Curator stage:
+
+```yaml
+model:
+  provider: gemini
+  name: gemini-2.5-flash
+  endpoint: https://generativelanguage.googleapis.com/v1beta/models
+```
+
+OpenAI-backed Researcher or Curator stage:
+
+```yaml
+model:
+  provider: openai
+  name: gpt-4.1-mini
+  endpoint: https://api.openai.com/v1/responses
+```
+
+Ollama-backed Writer stage:
+
+```yaml
+model:
+  provider: ollama
+  name: gemma4:e4b
+  endpoint: http://localhost:11434/api/generate
+```
+
 Callers may select a profile when invoking the command-line entry point. When
 no profile is selected, the configured `default_profile` is used. Profile runs
 write to profile-specific ledger locations so separate scheduled jobs do not

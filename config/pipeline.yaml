@@ -10,14 +10,14 @@ profiles:
 stages:
   - name: researcher
     model:
-      provider: gemini
-      name: gemini-2.5-flash
-      endpoint: https://generativelanguage.googleapis.com/v1beta/models
+      provider: openai
+      name: gpt-4.1-mini
+      endpoint: https://api.openai.com/v1/responses
   - name: curator
     model:
-      provider: gemini
-      name: gemini-2.5-flash
-      endpoint: https://generativelanguage.googleapis.com/v1beta/models
+      provider: openai
+      name: gpt-4.1-mini
+      endpoint: https://api.openai.com/v1/responses
   - name: writer
     model:
       provider: ollama
