@@ -25,6 +25,10 @@ def make_ollama_response(message: str) -> bytes:
     return json.dumps({"model": "gemma4:e4b", "response": message}).encode("utf-8")
 
 
+def make_notes_response(notes: list[str]) -> bytes:
+    return make_ollama_response(json.dumps(notes))
+
+
 def make_curator_item(rank: int, url: str | None = None) -> dict:
     return {
         "title": f"Item Title {rank}",
@@ -54,33 +58,57 @@ class WriterTests(unittest.TestCase):
         self.temporary_directory = tempfile.TemporaryDirectory()
         self.prompt_path = Path(self.temporary_directory.name) / "outbound_brief.md"
         self.prompt_path.write_text("You are an outbound writer.", encoding="utf-8")
+        self.template_path = Path(self.temporary_directory.name) / "template.md"
+        self.template_path.write_text(
+            "\n".join(
+                [
+                    "# Message Template",
+                    "",
+                    "Daily briefing",
+                    "",
+                    "{items}",
+                    "",
+                    "# Item Template",
+                    "",
+                    "• {title}",
+                    "",
+                    "{note}",
+                    "",
+                    "Source:",
+                    "{url}",
+                ]
+            ),
+            encoding="utf-8",
+        )
 
     def tearDown(self):
         self.temporary_directory.cleanup()
 
     def test_sends_curator_items_and_prompt_to_ollama_and_returns_message(self):
         items = [make_curator_item(1), make_curator_item(2)]
-        message = make_outbound_message(sorted(items, key=lambda x: x["rank"]))
+        notes = ["First generated note.", "Second generated note."]
 
         with patch(
             "writer.urllib.request.urlopen",
-            return_value=FakeResponse(make_ollama_response(message)),
+            return_value=FakeResponse(make_notes_response(notes)),
         ) as urlopen:
-            result = Writer(prompt_path=self.prompt_path).run(items)
+            result = Writer(prompt_path=self.prompt_path, template_path=self.template_path).run(items)
 
         request_body = json.loads(urlopen.call_args.args[0].data)
         self.assertIn("You are an outbound writer.", request_body["prompt"])
         self.assertIn(json.dumps(items, indent=2), request_body["prompt"])
         self.assertIsInstance(result, str)
-        self.assertEqual(result, message)
+        self.assertIn("Daily briefing", result)
+        self.assertIn(items[0]["title"], result)
+        self.assertIn(items[0]["url"], result)
+        self.assertIn(notes[0], result)
 
     def test_uses_default_prompt_when_no_prompt_path_given(self):
         items = [make_curator_item(1)]
-        message = make_outbound_message(items)
 
         with patch(
             "writer.urllib.request.urlopen",
-            return_value=FakeResponse(make_ollama_response(message)),
+            return_value=FakeResponse(make_notes_response(["Generated note."])),
         ) as urlopen:
             Writer().run(items)
 
@@ -110,7 +138,7 @@ class WriterTests(unittest.TestCase):
             side_effect=urllib.error.URLError("connection refused"),
         ):
             with self.assertRaisesRegex(WriterError, "Ollama model execution failed"):
-                Writer(prompt_path=self.prompt_path).run([make_curator_item(1)])
+                Writer(prompt_path=self.prompt_path, template_path=self.template_path).run([make_curator_item(1)])
 
     def test_empty_ollama_response_raises_writer_error(self):
         with patch(
@@ -118,7 +146,126 @@ class WriterTests(unittest.TestCase):
             return_value=FakeResponse(make_ollama_response("")),
         ):
             with self.assertRaisesRegex(WriterError, "empty"):
-                Writer(prompt_path=self.prompt_path).run([make_curator_item(1)])
+                Writer(prompt_path=self.prompt_path, template_path=self.template_path).run([make_curator_item(1)])
+
+    def test_missing_template_file_raises_writer_error(self):
+        missing_path = Path(self.temporary_directory.name) / "missing-template.md"
+
+        with self.assertRaisesRegex(WriterError, "could not be loaded"):
+            Writer(prompt_path=self.prompt_path, template_path=missing_path).run([make_curator_item(1)])
+
+    def test_empty_template_file_raises_writer_error(self):
+        empty_path = Path(self.temporary_directory.name) / "empty-template.md"
+        empty_path.write_text("", encoding="utf-8")
+
+        with self.assertRaisesRegex(WriterError, "Template file is empty"):
+            Writer(prompt_path=self.prompt_path, template_path=empty_path).run([make_curator_item(1)])
+
+    def test_template_missing_required_placeholder_raises_writer_error(self):
+        templates = [
+            ["# Message Template", "", "# Item Template", "", "{title}", "{note}", "{url}"],
+            ["# Message Template", "", "{items}", "", "# Item Template", "", "{note}", "{url}"],
+            ["# Message Template", "", "{items}", "", "# Item Template", "", "{title}", "{url}"],
+            ["# Message Template", "", "{items}", "", "# Item Template", "", "{title}", "{note}"],
+        ]
+
+        for lines in templates:
+            with self.subTest(template="\n".join(lines)):
+                self.template_path.write_text("\n".join(lines), encoding="utf-8")
+                with self.assertRaisesRegex(WriterError, "placeholder"):
+                    Writer(prompt_path=self.prompt_path, template_path=self.template_path).run([make_curator_item(1)])
+
+    def test_model_changed_url_is_not_authoritative(self):
+        items = [
+            make_curator_item(
+                1,
+                "https://example.com/news/label/very/long/source-slug?ref=curator",
+            )
+        ]
+
+        with patch(
+            "writer.urllib.request.urlopen",
+            return_value=FakeResponse(make_notes_response(["The model can mention context, but not own the source."])),
+        ):
+            result = Writer(prompt_path=self.prompt_path, template_path=self.template_path).run(items)
+
+        self.assertIn(items[0]["url"], result)
+        self.assertNotIn("https://example.com/news/label", result.replace(items[0]["url"], ""))
+
+    def test_model_changed_title_is_not_authoritative(self):
+        items = [make_curator_item(1)]
+
+        with patch(
+            "writer.urllib.request.urlopen",
+            return_value=FakeResponse(make_notes_response(["Wrong Title: useful context without authority."])),
+        ):
+            result = Writer(prompt_path=self.prompt_path, template_path=self.template_path).run(items)
+
+        self.assertIn(items[0]["title"], result)
+
+    def test_model_omitted_url_still_uses_curator_url(self):
+        items = [make_curator_item(1)]
+
+        with patch(
+            "writer.urllib.request.urlopen",
+            return_value=FakeResponse(make_notes_response(["A concise generated note with no source link."])),
+        ):
+            result = Writer(prompt_path=self.prompt_path, template_path=self.template_path).run(items)
+
+        self.assertIn(items[0]["url"], result)
+
+    def test_items_are_assembled_in_ascending_rank_order(self):
+        items = [make_curator_item(2), make_curator_item(1)]
+
+        with patch(
+            "writer.urllib.request.urlopen",
+            return_value=FakeResponse(make_notes_response(["Rank one note.", "Rank two note."])),
+        ):
+            result = Writer(prompt_path=self.prompt_path, template_path=self.template_path).run(items)
+
+        self.assertLess(result.find("Item Title 1"), result.find("Item Title 2"))
+
+    def test_custom_template_controls_outbound_presentation(self):
+        items = [make_curator_item(1)]
+        self.template_path.write_text(
+            "\n".join(
+                [
+                    "# Message Template",
+                    "",
+                    "Custom opener",
+                    "",
+                    "{items}",
+                    "",
+                    "Custom closer",
+                    "",
+                    "# Item Template",
+                    "",
+                    "### {title}",
+                    "Why it matters: {note}",
+                    "Link => {url}",
+                ]
+            ),
+            encoding="utf-8",
+        )
+
+        with patch(
+            "writer.urllib.request.urlopen",
+            return_value=FakeResponse(make_notes_response(["custom note"])),
+        ):
+            result = Writer(prompt_path=self.prompt_path, template_path=self.template_path).run(items)
+
+        self.assertIn("Custom opener", result)
+        self.assertIn("### Item Title 1", result)
+        self.assertIn("Why it matters: custom note", result)
+        self.assertIn("Link => https://example.com/1", result)
+
+    def test_unusable_model_prose_raises_writer_error(self):
+        with patch(
+            "writer.urllib.request.urlopen",
+            return_value=FakeResponse(make_ollama_response("not json")),
+        ):
+            with self.assertRaisesRegex(WriterError, "usable item prose"):
+                Writer(prompt_path=self.prompt_path, template_path=self.template_path).run([make_curator_item(1)])
 
     def test_validation_succeeds_for_complete_message_with_all_items(self):
         items = [make_curator_item(1), make_curator_item(2)]
@@ -205,14 +352,13 @@ class WriterTests(unittest.TestCase):
 
     def test_loads_configured_prompt_at_run_time(self):
         items = [make_curator_item(1)]
-        message = make_outbound_message(items)
         self.prompt_path.write_text("updated writer prompt", encoding="utf-8")
 
         with patch(
             "writer.urllib.request.urlopen",
-            return_value=FakeResponse(make_ollama_response(message)),
+            return_value=FakeResponse(make_notes_response(["Generated note."])),
         ) as urlopen:
-            Writer(prompt_path=self.prompt_path).run(items)
+            Writer(prompt_path=self.prompt_path, template_path=self.template_path).run(items)
 
         request_body = json.loads(urlopen.call_args.args[0].data)
         self.assertIn("updated writer prompt", request_body["prompt"])

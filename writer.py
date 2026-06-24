@@ -15,6 +15,7 @@ from prompt_loader import PromptLoadError, load_prompt
 OLLAMA_MODEL = "gemma4:e4b"
 OLLAMA_ENDPOINT = "http://localhost:11434/api/generate"
 DEFAULT_PROMPT_PATH = Path(__file__).parent / "prompts" / "writers" / "outbound_brief.md"
+DEFAULT_TEMPLATE_PATH = Path(__file__).parent / "prompts" / "writers" / "template.md"
 
 
 class WriterError(DiagnosticError):
@@ -29,10 +30,12 @@ class Writer:
         model: str = OLLAMA_MODEL,
         endpoint: str = OLLAMA_ENDPOINT,
         prompt_path: str | Path = DEFAULT_PROMPT_PATH,
+        template_path: str | Path = DEFAULT_TEMPLATE_PATH,
     ) -> None:
         self.model = model
         self.endpoint = endpoint
         self.prompt_path = Path(prompt_path)
+        self.template_path = Path(template_path)
 
     def run(self, items: list[dict[str, Any]]) -> str:
         """Format curated items into an outbound message and return it."""
@@ -47,7 +50,15 @@ class Writer:
         if not prompt_content.strip():
             raise WriterError(f"Prompt file is empty: {self.prompt_path}")
 
-        full_prompt = f"{prompt_content}\n\nCurated items:\n{json.dumps(items, indent=2)}"
+        try:
+            template_content = load_prompt(self.template_path)
+        except PromptLoadError as error:
+            raise WriterError(str(error)) from error
+
+        message_template, item_template = self._parse_template(template_content)
+        sorted_items = sorted(items, key=lambda item: item["rank"])
+
+        full_prompt = f"{prompt_content}\n\nCurated items:\n{json.dumps(sorted_items, indent=2)}"
         payload = {
             "model": self.model,
             "prompt": full_prompt,
@@ -85,7 +96,90 @@ class Writer:
         if not message or not message.strip():
             raise WriterError("Ollama returned an empty response")
 
-        return message
+        notes = self._parse_notes(message, len(sorted_items))
+        outbound_message = self._assemble_message(message_template, item_template, sorted_items, notes)
+
+        is_valid, reason = self.validate(outbound_message, sorted_items)
+        if not is_valid:
+            raise WriterError(f"Final outbound message failed validation: {reason}")
+
+        return outbound_message
+
+    def _parse_template(self, template_content: str) -> tuple[str, str]:
+        if not template_content.strip():
+            raise WriterError(f"Template file is empty: {self.template_path}")
+
+        lines = template_content.splitlines()
+        separator_index = next(
+            (index for index, line in enumerate(lines) if line.strip() == "# Item Template"),
+            None,
+        )
+        if separator_index is None:
+            raise WriterError("Template is missing required item template section")
+
+        message_lines = lines[:separator_index]
+        item_lines = lines[separator_index + 1 :]
+
+        if message_lines and message_lines[0].strip() == "# Message Template":
+            message_lines = message_lines[1:]
+
+        message_template = "\n".join(message_lines).strip()
+        item_template = "\n".join(item_lines).strip()
+
+        missing_placeholders = []
+        if "{items}" not in message_template:
+            missing_placeholders.append("{items}")
+        for placeholder in ("{title}", "{note}", "{url}"):
+            if placeholder not in item_template:
+                missing_placeholders.append(placeholder)
+
+        if missing_placeholders:
+            joined = ", ".join(missing_placeholders)
+            raise WriterError(f"Template is missing required placeholder(s): {joined}")
+
+        return message_template, item_template
+
+    @staticmethod
+    def _parse_notes(model_response: str, expected_count: int) -> list[str]:
+        try:
+            parsed = json.loads(model_response)
+        except json.JSONDecodeError as error:
+            raise WriterError(f"Ollama returned no usable item prose: {error}") from error
+
+        if not isinstance(parsed, list):
+            raise WriterError("Ollama returned no usable item prose: expected a JSON array")
+
+        notes = []
+        for note in parsed:
+            if not isinstance(note, str) or not note.strip():
+                raise WriterError("Ollama returned no usable item prose")
+            notes.append(note.strip())
+
+        if len(notes) != expected_count:
+            raise WriterError(
+                f"Ollama returned no usable item prose: expected {expected_count} notes, got {len(notes)}"
+            )
+
+        return notes
+
+    @staticmethod
+    def _assemble_message(
+        message_template: str,
+        item_template: str,
+        items: list[dict[str, Any]],
+        notes: list[str],
+    ) -> str:
+        rendered_items = []
+        for item, note in zip(items, notes):
+            rendered_items.append(
+                item_template.format(
+                    title=item.get("title", ""),
+                    note=note,
+                    url=item.get("url", ""),
+                )
+            )
+
+        return message_template.format(items="\n\n".join(rendered_items)).strip()
 
     @staticmethod
     def validate(output: Any, items: list[dict[str, Any]]) -> tuple[bool, str]:
@@ -123,13 +217,23 @@ class Writer:
             )
             section = output[section_start:section_end]
 
-            url_pos = section.find(url)
-            if url_pos == -1:
+            if section.find(url) == -1:
                 return False, f"Item URL missing from outbound message: {url!r}"
 
-            between = section[:url_pos].strip()
-            between_cleaned = between.replace("Source:", "").strip()
-            if not between_cleaned:
+            if not Writer._section_has_readable_prose(section, title, url):
                 return False, f"Item is missing summary text in outbound message: {title!r}"
 
         return True, "Outbound message contains all curator items in ascending rank order with title, URL, and summary"
+
+    @staticmethod
+    def _section_has_readable_prose(section: str, title: str, url: str) -> bool:
+        remainder = section.replace(title, "").replace(url, "")
+        for line in remainder.splitlines():
+            text = line.strip().strip("*_-•#`[]()")
+            if not text:
+                continue
+            if text.endswith(":"):
+                continue
+            if any(character.isalnum() for character in text):
+                return True
+        return False

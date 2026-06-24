@@ -306,3 +306,10 @@
 - Scenario 9, Telegram Uses Configured Destination: PASS — the Telegram provider sends the outbound message to the destination specified in the project environment configuration, reports success when the Telegram endpoint accepts the message, and reports failure when the transport fails or Telegram rejects the message, without performing any Writer formatting or Curator filtering.
 - Scenario 10, Repository Tests Do Not Require Live Telegram: PASS — all delivery behavior is exercised under controlled HTTP behavior without sending a real Telegram message, and all 24 delivery and planner tests pass.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/writer_authoritative_assembly_feature.md`.
+- Summary of work completed: The Writer now returns an outbound message that includes every curated item in ascending rank order while preserving each curated title and source URL exactly, even when the local model response omits or changes those fields. Final message wording and markdown presentation now come from the Writer template, and missing, empty, or incomplete templates fail with readable errors. Local model output is used only for per-item prose, and unusable prose is rejected before an outbound message is returned.
+- Assumptions made: The Writer template contains a complete-message section with `{items}` and an item section marked by `# Item Template` containing `{title}`, `{note}`, and `{url}`. The optional `# Message Template` heading is treated as template metadata rather than visible outbound-message text. No new dependencies were added.
+- Gaps or suspected bugs: None.
