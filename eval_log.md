@@ -469,3 +469,18 @@
 - Summary of work completed: Removed remaining source-level Researcher and Curator endpoint defaults so those stages no longer embed Gemini or OpenAI service endpoints in code. Configured pipeline assembly now requires every configured model-backed stage to provide a model object with provider, name, and endpoint, and controlled tests pass endpoints explicitly when constructing stages directly.
 - Assumptions made: Direct stage construction remains allowed when callers provide an endpoint explicitly. Model names remain as existing constructor defaults for direct construction because this review focused on endpoint ownership. No new dependencies were added.
 - Gaps or suspected bugs: Real provider endpoints were not called during this review fix.
+
+## Evaluation — 2026-06-24
+
+- Eval file used: `evals/configured_model_endpoints_feature.eval.md`.
+- Scenario 1, Default Pipeline Declares Model Endpoints: PASS — the default pipeline configuration declares non-empty text endpoints for Researcher, Curator, and Writer, and loading succeeds without any source-level endpoint defaults being required.
+- Scenario 2, Gemini Endpoints Are Configuration-Owned: PASS — when Researcher and Curator are configured for Gemini, each stage attempts to contact the Gemini endpoint declared in configuration, both preserve their existing output contracts, and changing the endpoint requires only a configuration update.
+- Scenario 3, OpenAI Endpoints Are Configuration-Owned: PASS — when Researcher and Curator are configured for OpenAI, each stage attempts to contact the OpenAI endpoint declared in configuration, both preserve their existing output contracts, and changing the endpoint requires only a configuration update.
+- Scenario 4, Writer Endpoint Remains Configuration-Owned: PASS — when Writer is configured for Ollama, it attempts to contact the Ollama endpoint declared in configuration, preserves its existing outbound-message contract, and changing the endpoint requires only a configuration update.
+- Scenario 5, Missing Endpoint Fails Configuration Loading: PASS — a model object without an endpoint causes configuration loading to fail with a readable error before any provider call is attempted, for Researcher, Curator, and Writer.
+- Scenario 6, Invalid Endpoint Fails Configuration Loading: PASS — a model object with an empty endpoint and a model object with a non-text endpoint each cause configuration loading to fail with a readable error before any provider call is attempted.
+- Scenario 7, Source-Level Endpoint Fallbacks Are Removed: PASS — Researcher and Curator each require an endpoint to be supplied on construction with no built-in fallback, and neither stage embeds a Gemini or OpenAI service endpoint in source code.
+- Scenario 8, Provider Failure Diagnostics Use Configured Endpoint Safely: PASS — a failed provider call produces diagnostic context identifying the endpoint used for the attempted call, the selected provider, and the configured model, without exposing API keys, authentication headers, or environment values.
+- Scenario 9, Existing Provider Support Remains Unchanged: PASS — Researcher and Curator continue to support Gemini and OpenAI, Writer continues to support only Ollama, unsupported provider combinations continue to fail with readable errors, and all existing stage output contracts remain unchanged.
+- Scenario 10, Automated Tests Avoid Live External Calls: PASS — configured endpoint behavior, missing endpoint failures, and invalid endpoint failures are all covered with controlled inputs and mocked provider responses; all 125 repository tests pass without requiring any live Gemini, OpenAI, Ollama, or Telegram call.
+- Overall verdict: PASS.
