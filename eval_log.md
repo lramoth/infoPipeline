@@ -337,3 +337,15 @@
 - Summary of work completed: Researcher and Curator now rely on configured prompt paths when the default pipeline is assembled, so changing the pipeline's research and curation prompts is handled through configuration rather than source-level prompt fallbacks. The Researcher stage documentation now uses topic-neutral configured-topic language, and the existing configured prompt-path behavior continues to pass.
 - Assumptions made: Direct construction of Researcher or Curator requires an explicit prompt path because prompt selection is now a configuration responsibility. Existing prompt filenames and prompt content were left unchanged because the spec excluded renaming prompts or changing prompt content. No new dependencies were added.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-24
+
+- Eval file used: `evals/config_owned_prompt_paths_feature.eval.md`.
+- Scenario 1, Default Pipeline Uses Configured Prompt Paths: PASS — the default pipeline loads the research stage with the prompt path declared in the pipeline configuration, loads the curation stage with the prompt path declared in the pipeline configuration, leaves Writer prompt-path behavior unchanged, and both declared prompt files exist in the repository.
+- Scenario 2, Source-Level Researcher Prompt Fallback Is Removed: PASS — the Researcher source defines no module-level default prompt path, requires an explicit prompt path to be supplied on construction with no built-in fallback, and its stage documentation describes the stage as collecting configured-topic research in topic-neutral language.
+- Scenario 3, Source-Level Curator Prompt Fallback Is Removed: PASS — the Curator source defines no module-level default prompt path and requires an explicit prompt path to be supplied on construction with no built-in fallback.
+- Scenario 4, Configured Prompt Loading Still Works: PASS — each stage loads its supplied prompt from the configured file at runtime, sends that prompt content to the configured model endpoint, and completes its existing behavior without any source-level default prompt path.
+- Scenario 5, Missing Prompt Path Remains A Configuration Error: PASS — a prompt-driven stage with no declared prompt path in the pipeline configuration causes loading to fail with a readable configuration error, and no implicit source-level fallback is applied.
+- Scenario 6, Missing Configured Prompt File Remains A Configuration Error: PASS — a prompt-driven stage that declares a prompt path pointing to a nonexistent file causes loading to fail with a readable configuration error, and no implicit source-level fallback is applied.
+- Scenario 7, Repository Tests Still Pass Without Live External Calls: PASS — all 101 repository tests pass; configured prompt-path behavior and missing prompt-path and missing prompt-file failure conditions are all covered without any live Gemini, Ollama, or Telegram call.
+- Overall verdict: PASS.
