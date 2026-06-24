@@ -330,3 +330,10 @@
 - Scenario 11, Unusable Model Prose Fails Readably: PASS — when the local model cannot produce usable item prose, the stage fails with a readable reason and no outbound message is returned as a successful result.
 - Scenario 12, Existing Boundaries Remain Unchanged: PASS — the outbound message is generated using only the local Ollama model call with no Gemini API call, no additional research, no changes to Curator output, and no invocation of delivery behavior.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/config_owned_prompt_paths_feature.md`.
+- Summary of work completed: Researcher and Curator now rely on configured prompt paths when the default pipeline is assembled, so changing the pipeline's research and curation prompts is handled through configuration rather than source-level prompt fallbacks. The Researcher stage documentation now uses topic-neutral configured-topic language, and the existing configured prompt-path behavior continues to pass.
+- Assumptions made: Direct construction of Researcher or Curator requires an explicit prompt path because prompt selection is now a configuration responsibility. Existing prompt filenames and prompt content were left unchanged because the spec excluded renaming prompts or changing prompt content. No new dependencies were added.
+- Gaps or suspected bugs: None.

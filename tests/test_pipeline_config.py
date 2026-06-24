@@ -4,6 +4,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pipeline_config
+import curator as curator_module
+import researcher as researcher_module
 from curator import Curator
 from delivery import TelegramDelivery
 from pipeline_config import PipelineConfigError, load_delivery_config, load_pipeline
@@ -190,6 +192,10 @@ class DefaultPipelineConfigTests(unittest.TestCase):
                 "prompts/writers/outbound_brief.md",
             ],
         )
+
+    def test_researcher_and_curator_do_not_define_prompt_path_fallbacks(self):
+        self.assertFalse(hasattr(researcher_module, "DEFAULT_PROMPT_PATH"))
+        self.assertFalse(hasattr(curator_module, "DEFAULT_PROMPT_PATH"))
 
     def test_default_config_defines_enabled_telegram_delivery(self):
         providers = load_delivery_config()

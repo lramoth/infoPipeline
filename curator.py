@@ -16,7 +16,6 @@ from structured_output import StructuredOutputError, extract_json_payload
 
 GEMINI_MODEL = "gemini-2.5-flash"
 GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
-DEFAULT_PROMPT_PATH = Path(__file__).parent / "prompts" / "curators" / "polegroup_techno.md"
 
 
 class CuratorError(DiagnosticError):
@@ -28,10 +27,10 @@ class Curator:
 
     def __init__(
         self,
+        prompt_path: str | Path,
         model: str = GEMINI_MODEL,
         endpoint: str = GEMINI_ENDPOINT,
         env_path: str | Path = PROJECT_ENV_PATH,
-        prompt_path: str | Path = DEFAULT_PROMPT_PATH,
     ) -> None:
         self.model = model
         self.endpoint = endpoint.rstrip("/")
