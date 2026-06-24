@@ -99,6 +99,19 @@ def _assemble_stage(entry: Any, index: int) -> Researcher | Curator | Writer:
         )
 
     constructor_args: dict[str, Any] = {"prompt_path": resolved_prompt_path}
+    if name == "writer":
+        template_path = entry.get("template_path")
+        if not isinstance(template_path, str) or not template_path:
+            raise PipelineConfigError(
+                f"Stage {name} is missing required field: template_path"
+            )
+        resolved_template_path = PROJECT_ROOT / template_path
+        if not resolved_template_path.is_file():
+            raise PipelineConfigError(
+                f"Configured template file does not exist for stage {name}: {resolved_template_path}"
+            )
+        constructor_args["template_path"] = resolved_template_path
+
     model = entry.get("model")
     if model is not None:
         if not isinstance(model, dict):

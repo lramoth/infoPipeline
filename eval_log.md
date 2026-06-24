@@ -349,3 +349,10 @@
 - Scenario 6, Missing Configured Prompt File Remains A Configuration Error: PASS — a prompt-driven stage that declares a prompt path pointing to a nonexistent file causes loading to fail with a readable configuration error, and no implicit source-level fallback is applied.
 - Scenario 7, Repository Tests Still Pass Without Live External Calls: PASS — all 101 repository tests pass; configured prompt-path behavior and missing prompt-path and missing prompt-file failure conditions are all covered without any live Gemini, Ollama, or Telegram call.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/config_owned_writer_paths_feature.md`.
+- Summary of work completed: The default pipeline now supplies both Writer prompt and Writer template paths from configuration, and valid configured paths continue to let Writer generate the same outbound message behavior. Missing Writer prompt paths, missing Writer template paths, nonexistent prompt files, and nonexistent template files are rejected during configuration loading with readable errors. Existing Researcher and Curator configured prompt-path behavior continues to pass.
+- Assumptions made: Direct construction of Writer requires explicit prompt and template paths because both path selections are now configuration responsibilities. Existing Writer prompt and template filenames and content were left unchanged because the spec excluded renaming or content changes. No new dependencies were added.
+- Gaps or suspected bugs: None.

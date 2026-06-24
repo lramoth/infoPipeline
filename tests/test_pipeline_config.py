@@ -6,6 +6,7 @@ from unittest.mock import patch
 import pipeline_config
 import curator as curator_module
 import researcher as researcher_module
+import writer as writer_module
 from curator import Curator
 from delivery import TelegramDelivery
 from pipeline_config import PipelineConfigError, load_delivery_config, load_pipeline
@@ -23,6 +24,7 @@ class PipelineConfigTests(unittest.TestCase):
             "prompts/researchers/techno_news.md",
             "prompts/curators/polegroup_techno.md",
             "prompts/writers/outbound_brief.md",
+            "prompts/writers/template.md",
         ):
             prompt_path = self.project_root / relative_path
             prompt_path.parent.mkdir(parents=True, exist_ok=True)
@@ -48,6 +50,7 @@ class PipelineConfigTests(unittest.TestCase):
             """stages:
   - name: writer
     prompt_path: prompts/writers/outbound_brief.md
+    template_path: prompts/writers/template.md
     model:
       provider: ollama
       name: custom-writer
@@ -65,6 +68,10 @@ class PipelineConfigTests(unittest.TestCase):
         self.assertEqual([type(stage) for stage in stages], [Writer, Researcher, Curator])
         self.assertEqual(stages[0].model, "custom-writer")
         self.assertEqual(stages[0].endpoint, "http://localhost:9999/generate")
+        self.assertEqual(
+            stages[0].template_path,
+            self.project_root / "prompts/writers/template.md",
+        )
         self.assertEqual(
             [stage.prompt_path for stage in stages],
             [
@@ -99,6 +106,16 @@ class PipelineConfigTests(unittest.TestCase):
         with self.assertRaisesRegex(PipelineConfigError, "prompt_path"):
             load_pipeline()
 
+    def test_writer_without_template_path_is_an_error(self):
+        self.write_config(
+            """stages:
+  - name: writer
+    prompt_path: prompts/writers/outbound_brief.md
+"""
+        )
+        with self.assertRaisesRegex(PipelineConfigError, "template_path"):
+            load_pipeline()
+
     def test_unknown_stage_name_is_an_error(self):
         self.write_config("stages:\n  - name: broadcaster\n    prompt_path: prompt.md\n")
         with self.assertRaisesRegex(PipelineConfigError, "Unknown stage"):
@@ -109,6 +126,17 @@ class PipelineConfigTests(unittest.TestCase):
             "stages:\n  - name: researcher\n    prompt_path: prompts/missing.md\n"
         )
         with self.assertRaisesRegex(PipelineConfigError, "prompt file does not exist"):
+            load_pipeline()
+
+    def test_missing_writer_template_file_is_an_error(self):
+        self.write_config(
+            """stages:
+  - name: writer
+    prompt_path: prompts/writers/outbound_brief.md
+    template_path: prompts/writers/missing-template.md
+"""
+        )
+        with self.assertRaisesRegex(PipelineConfigError, "template file does not exist"):
             load_pipeline()
 
     def test_model_object_requires_provider_and_name(self):
@@ -192,10 +220,16 @@ class DefaultPipelineConfigTests(unittest.TestCase):
                 "prompts/writers/outbound_brief.md",
             ],
         )
+        self.assertEqual(
+            stages[2].template_path.relative_to(pipeline_config.PROJECT_ROOT).as_posix(),
+            "prompts/writers/template.md",
+        )
 
-    def test_researcher_and_curator_do_not_define_prompt_path_fallbacks(self):
+    def test_configured_stages_do_not_define_path_fallbacks(self):
         self.assertFalse(hasattr(researcher_module, "DEFAULT_PROMPT_PATH"))
         self.assertFalse(hasattr(curator_module, "DEFAULT_PROMPT_PATH"))
+        self.assertFalse(hasattr(writer_module, "DEFAULT_PROMPT_PATH"))
+        self.assertFalse(hasattr(writer_module, "DEFAULT_TEMPLATE_PATH"))
 
     def test_default_config_defines_enabled_telegram_delivery(self):
         providers = load_delivery_config()

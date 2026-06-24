@@ -10,6 +10,7 @@ import urllib.error
 from pathlib import Path
 from unittest.mock import patch
 
+import writer as writer_module
 from writer import Writer, WriterError
 
 
@@ -103,34 +104,26 @@ class WriterTests(unittest.TestCase):
         self.assertIn(items[0]["url"], result)
         self.assertIn(notes[0], result)
 
-    def test_uses_default_prompt_when_no_prompt_path_given(self):
-        items = [make_curator_item(1)]
-
-        with patch(
-            "writer.urllib.request.urlopen",
-            return_value=FakeResponse(make_notes_response(["Generated note."])),
-        ) as urlopen:
-            Writer().run(items)
-
-        request_body = json.loads(urlopen.call_args.args[0].data)
-        self.assertIn("outbound briefing", request_body["prompt"])
+    def test_writer_does_not_define_path_fallbacks(self):
+        self.assertFalse(hasattr(writer_module, "DEFAULT_PROMPT_PATH"))
+        self.assertFalse(hasattr(writer_module, "DEFAULT_TEMPLATE_PATH"))
 
     def test_empty_curator_items_raises_writer_error(self):
         with self.assertRaisesRegex(WriterError, "empty"):
-            Writer(prompt_path=self.prompt_path).run([])
+            Writer(prompt_path=self.prompt_path, template_path=self.template_path).run([])
 
     def test_missing_prompt_file_raises_writer_error(self):
         missing_path = Path(self.temporary_directory.name) / "missing.md"
 
         with self.assertRaisesRegex(WriterError, "could not be loaded"):
-            Writer(prompt_path=missing_path).run([make_curator_item(1)])
+            Writer(prompt_path=missing_path, template_path=self.template_path).run([make_curator_item(1)])
 
     def test_empty_prompt_file_raises_writer_error(self):
         empty_path = Path(self.temporary_directory.name) / "empty.md"
         empty_path.write_text("", encoding="utf-8")
 
         with self.assertRaisesRegex(WriterError, "empty"):
-            Writer(prompt_path=empty_path).run([make_curator_item(1)])
+            Writer(prompt_path=empty_path, template_path=self.template_path).run([make_curator_item(1)])
 
     def test_ollama_execution_failure_raises_writer_error(self):
         with patch(

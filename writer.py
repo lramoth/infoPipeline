@@ -14,8 +14,6 @@ from prompt_loader import PromptLoadError, load_prompt
 
 OLLAMA_MODEL = "gemma4:e4b"
 OLLAMA_ENDPOINT = "http://localhost:11434/api/generate"
-DEFAULT_PROMPT_PATH = Path(__file__).parent / "prompts" / "writers" / "outbound_brief.md"
-DEFAULT_TEMPLATE_PATH = Path(__file__).parent / "prompts" / "writers" / "template.md"
 
 
 class WriterError(DiagnosticError):
@@ -27,10 +25,10 @@ class Writer:
 
     def __init__(
         self,
+        prompt_path: str | Path,
+        template_path: str | Path,
         model: str = OLLAMA_MODEL,
         endpoint: str = OLLAMA_ENDPOINT,
-        prompt_path: str | Path = DEFAULT_PROMPT_PATH,
-        template_path: str | Path = DEFAULT_TEMPLATE_PATH,
     ) -> None:
         self.model = model
         self.endpoint = endpoint

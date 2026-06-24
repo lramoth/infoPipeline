@@ -11,6 +11,7 @@ stages:
       name: gemini-2.5-flash
   - name: writer
     prompt_path: prompts/writers/outbound_brief.md
+    template_path: prompts/writers/template.md
     model:
       provider: ollama
       name: gemma4:e4b

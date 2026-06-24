@@ -413,6 +413,19 @@ class PlannerTests(unittest.TestCase):
     def test_ollama_failure_records_local_endpoint_and_error_message(self):
         prompt_path = Path(self.temporary_directory.name) / "writer.md"
         prompt_path.write_text("write", encoding="utf-8")
+        template_path = Path(self.temporary_directory.name) / "template.md"
+        template_path.write_text(
+            "\n".join(
+                [
+                    "{items}",
+                    "# Item Template",
+                    "{title}",
+                    "{note}",
+                    "{url}",
+                ]
+            ),
+            encoding="utf-8",
+        )
 
         with patch(
             "writer.urllib.request.urlopen",
@@ -421,7 +434,7 @@ class PlannerTests(unittest.TestCase):
             result = Planner(
                 [
                     Stage("curator", lambda: [{"title": "A", "url": "https://a.example", "summary": "s", "curation_reason": "r", "rank": 1}], lambda output: (True, "passed")),
-                    Writer(prompt_path=prompt_path),
+                    Writer(prompt_path=prompt_path, template_path=template_path),
                 ],
                 self.ledger_path,
             ).run()
