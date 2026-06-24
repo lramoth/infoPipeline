@@ -252,3 +252,15 @@
 - Summary of work completed: Writer validation now accepts Telegram messages where multiple curated items cite the same source URL, provided each ranked item section contains that item's title, summary text, and source URL. Validation still rejects messages with missing item titles, missing source URLs, missing summary text, or items shown out of rank order.
 - Assumptions made: An item's message section starts at its title and continues until the next ranked item title, or the end of the message for the final item. No new dependencies were added.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-23
+
+- Eval file used: `evals/writer_url_validation_fix.eval.md`.
+- Scenario 1, Distinct URLs In Ranked Item Sections: PASS — a message containing two items with distinct source URLs, each appearing with its title, summary text, and URL in ascending rank order, is accepted.
+- Scenario 2, Shared URL Repeated In Each Ranked Item Section: PASS — a message where two items share the same source URL and that URL appears in each item's section is accepted; the repeated URL alone does not cause rejection.
+- Scenario 3, Shared URL Present In Only One Item Section: PASS — a message where a shared source URL appears in only one item's section is rejected; the item section lacking the URL is treated as having a missing source URL.
+- Scenario 4, Missing Item Title: PASS — a message where an item title is absent is rejected.
+- Scenario 5, Missing Item URL: PASS — a message where an item's source URL does not appear in that item's section is rejected.
+- Scenario 6, Missing Summary Text: PASS — a message where an item section contains a title and source URL but no summary text is rejected.
+- Scenario 7, Items Out Of Rank Order: PASS — a message where items appear out of ascending rank order is rejected.
+- Overall verdict: PASS.
