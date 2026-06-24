@@ -10,9 +10,9 @@ profiles:
 stages:
   - name: researcher
     model:
-      provider: openai
-      name: gpt-4.1-mini
-      endpoint: https://api.openai.com/v1/responses
+      provider: gemini
+      name: gemini-2.5-flash
+      endpoint: https://generativelanguage.googleapis.com/v1beta/models
   - name: curator
     model:
       provider: openai
