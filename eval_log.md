@@ -271,3 +271,16 @@
 - Summary of work completed: The Writer now describes and validates its output as an outbound message, uses a destination-agnostic default prompt path, and keeps producing the same final message string for the current pipeline. The default Writer prompt now asks for an outbound briefing, pipeline configuration points to the renamed Writer prompt, Writer tests describe outbound-message behavior, and documentation no longer describes the Writer as producing a Telegram message.
 - Assumptions made: Historical eval entries and append-only build logs were left unchanged, while current Writer contract, prompt, configuration, tests, and Writer-related documentation were updated. No new dependencies were added.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-23
+
+- Eval file used: `evals/outbound_message_terminology_cleanup.eval.md`.
+- Scenario 1, Writer Responsibility Uses Outbound Message Terminology: PASS — the Writer contract describes its output as an outbound message in all descriptions, does not reference Telegram as a delivery responsibility, and related documentation describes Telegram only in delivery context.
+- Scenario 2, Writer Prompt Is Destination-Agnostic: PASS — the default Writer prompt describes the task as writing a daily outbound briefing, contains no Telegram references, and preserves the existing briefing format suitable for the daily pipeline.
+- Scenario 3, Writer Prompt Path Is Destination-Agnostic: PASS — the default Writer prompt file is named `outbound_brief.md`, both the Writer default path and the pipeline configuration point to that destination-agnostic file, and no reference to `prompts/writers/telegram_brief.md` exists in current code or configuration.
+- Scenario 4, Writer Validation Language Uses Outbound Message Terminology: PASS — validation failure reasons cite missing title, URL, and summary text in the outbound message, the success reason names the outbound message, and no validation reason mentions a Telegram message.
+- Scenario 5, Writer Tests Describe Destination-Agnostic Behavior: PASS — Writer tests use destination-agnostic helper and prompt names, test assertions reference outbound briefing content, and no Telegram message or Telegram-ready message terminology appears in any Writer test.
+- Scenario 6, Telegram References Remain Only For Concrete Delivery Concerns: PASS — Telegram references in AGENTS.md and architecture.md describe delivery behavior, credentials, bot token, and chat ID; no current Writer code, prompt, test, or configuration file describes Writer output as a Telegram message; historical append-only log entries that preserve prior wording are not treated as failures.
+- Scenario 7, Runtime Message Generation Behavior Is Preserved: PASS — the Writer returns a non-empty final message string under a controlled local-model response, no Telegram API call is made during message generation, and no new Delivery stage or delivery module is required to generate the message.
+- Scenario 8, Repository Tests Still Pass: PASS — all 78 repository tests pass without live external service calls after the terminology and prompt-path updates.
+- Overall verdict: PASS.
