@@ -378,3 +378,14 @@
 - Summary of work completed: Active pipeline configuration tests now prove configured prompt and template path behavior using topic-neutral fixture prompt filenames, while the default configuration is checked by confirming its referenced prompt and template files exist rather than requiring specific topic words in filenames. Writer validation tests now use topic-neutral synthetic briefing labels without changing Writer validation behavior.
 - Assumptions made: Current prompt filenames, prompt content, and `config/pipeline.yaml` were left unchanged because topic-specific configured prompt paths remain acceptable. Historical specs, evals, and build/evaluation logs were left unchanged. No new dependencies were added.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-24
+
+- Eval file used: `evals/topic_neutral_active_tests_feature.eval.md`.
+- Scenario 1, Pipeline Config Tests Use Topic-Neutral Fixture Prompt Names: PASS — controlled pipeline configuration tests create fixture prompt files with names that contain no current topic name, the tests verify that configured prompt and template paths are loaded correctly, and topic-specific names remain acceptable in real configuration values.
+- Scenario 2, Default Config Checks Do Not Require Topic-Specific Prompt Names: PASS — the default configuration test confirms that each configured prompt file and the configured Writer template file exist on disk without requiring those files to have any particular topic-specific name, and the check passes with the current topic-specific filenames in place.
+- Scenario 3, Writer Test Fixtures Use Topic-Neutral Briefing Labels: PASS — synthetic outbound messages in Writer tests use a generic daily briefing header with no topic-specific wording, Writer validation behavior is unchanged, and no Writer test implies that a specific topic is required for outbound message validation.
+- Scenario 4, Prompt Files And Pipeline Configuration Are Not Renamed For This Cleanup: PASS — existing prompt filenames remain topic-specific, prompt content is unchanged, the pipeline configuration continues to reference topic-specific prompt filenames, and those configurations are not treated as failures.
+- Scenario 5, Historical Artifacts Are Not Rewritten: PASS — historical build logs, evaluation entries, and prior topic-specific wording remain in the append-only log without modification, and current active test behavior is evaluated separately from those historical records.
+- Scenario 6, Repository Tests Still Pass Without Live External Calls: PASS — all 103 repository tests pass; configured prompt-path behavior, Writer template-path behavior, and Writer validation with topic-neutral synthetic briefing labels all succeed without any live Gemini, Ollama, or Telegram call.
+- Overall verdict: PASS.
