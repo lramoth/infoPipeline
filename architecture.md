@@ -1,54 +1,57 @@
 # Architecture — infoPipeline
 
 ## What this system does
-A daily automated pipeline that searches for techno production news
-(labels, gear, artists — Polegroup-adjacent aesthetic, hardware relevant to
-a Eurorack/classic-drum-machine studio setup), curates it down to what's
-actually worth seeing by applying personal taste, formats it into a clean
-outbound message, and delivers it via Telegram every morning.
+A daily automated pipeline that searches for a configured topic, curates the
+results down to what's actually worth seeing by applying the configured taste
+profile, formats the result into a clean outbound message, and delivers it via
+the configured delivery providers on schedule.
 
 ## Components
 
-Five conceptual pieces. Only three involve an LLM call — the Planner and
-Delivery pieces are plain code.
+The default pipeline is assembled from `config/pipeline.yaml`, which defines
+stage order, prompt paths, model settings, and enabled delivery providers.
+
+Five conceptual pieces make up the configured pipeline. Only three involve an
+LLM call — the Planner and Delivery pieces are plain code.
 
 - **Planner** (pure Python — no LLM) — coordinates the pipeline. Reads and
   writes a JSON task ledger, validates each stage's output before
-  advancing to the next, and marks the run done. Runs once daily via cron,
-  hosted by OpenClaw.
+  advancing to the next, and records the run outcome. It is designed to be
+  invoked on a schedule by OpenClaw or cron.
 - **Researcher** (Gemini, search-grounded API) — finds raw candidate
   items via search. Structured extraction, low reasoning demand.
-- **Curator** (Gemini API prompt) — ranks and filters the
-  researcher's raw items by personal taste. The one stage doing real
-  judgment: distinguishing Polegroup-adjacent signal from generic festival
-  noise, deduping, applying taste criteria simultaneously.
+- **Curator** (Gemini API prompt) — uses a configured prompt to ask Gemini to
+  rank and filter the researcher's raw items. Validation checks that the
+  curated output has required fields and includes a rank 1 item.
 - **Writer** (local `gemma4:e4b` via Ollama) — formats the curator's
-  ranked, reasoned list into the final outbound message. Not a hard
-  reasoning task — local is fine.
+  ranked list into the final outbound message. The model generates item prose;
+  Python assembles the final message from the configured template and curator
+  titles/URLs.
 - **Delivery** (plain Python) — transports the final outbound message to
-  enabled delivery providers after all configured stages succeed. Telegram
-  is the first provider.
+  enabled delivery providers after all configured stages succeed. Telegram is
+  the currently implemented provider.
 
 ## Data flow
 
 ```
-Cron trigger
+Scheduled invocation
      │
      ▼
 Planner ──▶ Researcher ──▶ Curator ──▶ Writer
               │              │           │
               ▼              ▼           ▼
-         Eval check 1   Eval check 2  Eval check 3
-         ≥3 valid       On-taste, no  Length + format
-         sources?       duplicates?   ok?
+         Validate      Validate      Validate
+         ≥3 items      required      every item
+         with title,   fields and    appears in
+         URL, summary  rank 1        rank order
               │              │           │
               └──────────────┴───────────┘
                           │
                           ▼
-                   Planner marks stages done
+                  Planner records stages
                           │
                           ▼
-          Delivery sends outbound message via Telegram
+          Delivery sends via enabled providers
 ```
 
 Each stage is validated before the next runs. A failed check halts the
@@ -60,15 +63,18 @@ edit, rank, filter, or summarize the Writer's outbound message.
 
 ## External dependencies
 
-- **Gemini API** — Researcher's search results, Curator's ranking call. 
-- **Telegram** — Final delivery. Bot already paired and confirmed
-  bidirectional.
-- **Ollama (local)** — Writer. 
-- .env contains GEMINI_API_KEY, TELEGRAM_BOT_TOKEN, and TELEGRAM_CHAT_ID
+- **Gemini API** — Researcher search results and Curator ranking/filtering.
+- **Ollama (local)** — Writer item prose generation.
+- **Telegram Bot API** — currently implemented delivery provider.
+- **Local `.env` file** — contains `GEMINI_API_KEY`,
+  `TELEGRAM_BOT_TOKEN`, and `TELEGRAM_CHAT_ID`.
 
 ## Ledger
 
-The output/ledger.json is a record of each stage's status, output and validation
+`output/ledger.json` records the current day's stage status, stage output,
+validation reason, delivery outcomes, timestamps, and any diagnostic file path.
+When a stage fails or produces invalid output, best-effort diagnostic JSON files
+are written under `output/diagnostics/...`.
 
 ```json
 {
@@ -97,6 +103,5 @@ The output/ledger.json is a record of each stage's status, output and validation
 
 - OpenClaw is the host/runtime, not a participant in the pipeline's logic.
   All decision-making lives in plain Python (`planner.py`) and direct API
-  calls; OpenClaw provides infrastructure underneath:
-  - **Cron scheduling** — triggers `planner.py` daily via a macOS
-    LaunchAgent, so it survives terminal closure.
+  calls. OpenClaw or cron can invoke `planner.py` on a schedule; the Python
+  application itself runs one pipeline pass per invocation.
