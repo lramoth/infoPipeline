@@ -44,9 +44,10 @@ Well-established third-party libraries may be added when implementing the featur
   documented), the spec used, any assumptions, gaps, or suspected bugs.
 
 ## Eval log conventions
-`eval_log.md` is append-only.
-New entries must be written at the end of the file.
-Existing entries must never be reordered, modified, or inserted above.
+- `eval_log.md` is append-only.
+- New entries must be written at the end of the file.
+- Existing entries must never be reordered, modified, or inserted above.
+- Drafting or editing spec/eval artifacts does not require an eval_log.md entry unless explicitly requested.
 
 Build sessions append entries under:
 
