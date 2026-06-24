@@ -42,7 +42,7 @@ def make_curator_item(rank: int, url: str | None = None) -> dict:
 
 def make_outbound_message(items: list[dict]) -> str:
     """Build a synthetic outbound message in the given item order."""
-    lines = ["🎛 Techno Briefing", ""]
+    lines = ["Daily Briefing", ""]
     for item in items:
         lines.append(f"• {item['title']}")
         lines.append("")
@@ -282,7 +282,7 @@ class WriterTests(unittest.TestCase):
         items = [make_curator_item(1, shared_url), make_curator_item(2, shared_url)]
         message = "\n".join(
             [
-                "🎛 Techno Briefing",
+                "Daily Briefing",
                 "",
                 f"• {items[0]['title']}",
                 "",

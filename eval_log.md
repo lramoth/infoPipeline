@@ -371,3 +371,10 @@
 - Scenario 9, Existing Stage Boundaries Remain Unchanged: PASS — Writer uses the local model endpoint for item prose generation, preserves curated titles and source URLs in the outbound message, makes no Gemini API call, and does not invoke delivery behavior during outbound message generation.
 - Scenario 10, Repository Tests Still Pass Without Live External Calls: PASS — all 103 repository tests pass; Writer prompt loading, template assembly, configured path behavior, missing path and missing file failure conditions, and Researcher and Curator configured prompt-path behavior are all covered without any live Gemini, Ollama, or Telegram call.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/topic_neutral_active_tests_feature.md`.
+- Summary of work completed: Active pipeline configuration tests now prove configured prompt and template path behavior using topic-neutral fixture prompt filenames, while the default configuration is checked by confirming its referenced prompt and template files exist rather than requiring specific topic words in filenames. Writer validation tests now use topic-neutral synthetic briefing labels without changing Writer validation behavior.
+- Assumptions made: Current prompt filenames, prompt content, and `config/pipeline.yaml` were left unchanged because topic-specific configured prompt paths remain acceptable. Historical specs, evals, and build/evaluation logs were left unchanged. No new dependencies were added.
+- Gaps or suspected bugs: None.
