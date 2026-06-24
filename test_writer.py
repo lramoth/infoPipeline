@@ -128,6 +128,40 @@ class WriterTests(unittest.TestCase):
 
         self.assertTrue(passed, reason)
 
+    def test_validation_succeeds_when_items_share_url_in_each_section(self):
+        shared_url = "https://example.com/shared-source"
+        items = [make_curator_item(1, shared_url), make_curator_item(2, shared_url)]
+        message = make_telegram_message(sorted(items, key=lambda x: x["rank"]))
+
+        passed, reason = Writer.validate(message, items)
+
+        self.assertTrue(passed, reason)
+
+    def test_validation_fails_when_shared_url_is_missing_from_one_item_section(self):
+        shared_url = "https://example.com/shared-source"
+        items = [make_curator_item(1, shared_url), make_curator_item(2, shared_url)]
+        message = "\n".join(
+            [
+                "🎛 Techno Briefing",
+                "",
+                f"• {items[0]['title']}",
+                "",
+                "Some summary text about this item.",
+                "",
+                "Source:",
+                shared_url,
+                "",
+                f"• {items[1]['title']}",
+                "",
+                "Some summary text about this item.",
+            ]
+        )
+
+        passed, reason = Writer.validate(message, items)
+
+        self.assertFalse(passed)
+        self.assertIn("URL", reason)
+
     def test_validation_fails_when_output_is_not_a_string(self):
         passed, reason = Writer.validate(["not", "a", "string"], [make_curator_item(1)])
 

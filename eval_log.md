@@ -245,3 +245,10 @@
 - Scenario 8, No Rank 1 Item: PASS — `Curator.validate()` returns `False` when no item has `rank=1`, citing the missing rank.
 - Scenario 9, No URL Rewriting Or Canonicalization: PASS — `Curator.validate()` is a static method with no network calls, no URL parsing, and no URL mutation; it checks only field presence, field non-emptiness, and rank, leaving all URL values exactly as provided.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/writer_url_validation_fix.md`.
+- Summary of work completed: Writer validation now accepts Telegram messages where multiple curated items cite the same source URL, provided each ranked item section contains that item's title, summary text, and source URL. Validation still rejects messages with missing item titles, missing source URLs, missing summary text, or items shown out of rank order.
+- Assumptions made: An item's message section starts at its title and continues until the next ranked item title, or the end of the message for the final item. No new dependencies were added.
+- Gaps or suspected bugs: None.

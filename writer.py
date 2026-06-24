@@ -94,31 +94,42 @@ class Writer:
             return False, "Writer output is not a string"
 
         sorted_items = sorted(items, key=lambda item: item["rank"])
-        url_positions = []
+        title_positions = []
 
         for item in sorted_items:
             title = item.get("title", "")
-            url = item.get("url", "")
 
-            url_pos = output.find(url)
-            if url_pos == -1:
-                return False, f"Item URL missing from Telegram message: {url!r}"
-
-            title_pos = output.rfind(title, 0, url_pos)
+            title_pos = output.find(title)
             if title_pos == -1:
                 return False, f"Item title missing from Telegram message: {title!r}"
 
-            between = output[title_pos + len(title):url_pos].strip()
-            between_cleaned = between.replace("Source:", "").strip()
-            if not between_cleaned:
-                return False, f"Item is missing summary text in Telegram message: {title!r}"
+            title_positions.append(title_pos)
 
-            url_positions.append(url_pos)
-
-        for i in range(1, len(url_positions)):
-            if url_positions[i] <= url_positions[i - 1]:
+        for i in range(1, len(title_positions)):
+            if title_positions[i] <= title_positions[i - 1]:
                 prev_rank = sorted_items[i - 1]["rank"]
                 curr_rank = sorted_items[i]["rank"]
                 return False, f"Items are not in ascending rank order: rank {curr_rank} appears before rank {prev_rank}"
+
+        for index, item in enumerate(sorted_items):
+            title = item.get("title", "")
+            url = item.get("url", "")
+            title_pos = title_positions[index]
+            section_start = title_pos + len(title)
+            section_end = (
+                title_positions[index + 1]
+                if index + 1 < len(title_positions)
+                else len(output)
+            )
+            section = output[section_start:section_end]
+
+            url_pos = section.find(url)
+            if url_pos == -1:
+                return False, f"Item URL missing from Telegram message: {url!r}"
+
+            between = section[:url_pos].strip()
+            between_cleaned = between.replace("Source:", "").strip()
+            if not between_cleaned:
+                return False, f"Item is missing summary text in Telegram message: {title!r}"
 
         return True, "Telegram message contains all curator items in ascending rank order with title, URL, and summary"
