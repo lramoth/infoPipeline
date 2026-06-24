@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import inspect
 import sys
+import argparse
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -12,7 +13,7 @@ from typing import Any, Callable, Iterable
 
 from delivery import DeliveryResult
 from diagnostics import write_diagnostic
-from pipeline_config import load_delivery_config, load_pipeline
+from pipeline_config import load_delivery_config, load_pipeline, profile_ledger_path, resolve_profile_name
 
 
 ValidationResult = tuple[bool, str]
@@ -45,17 +46,30 @@ class Planner:
     def __init__(
         self,
         stages: Iterable[Any] | None = None,
-        ledger_path: str | Path = "output/ledger.json",
+        ledger_path: str | Path | None = None,
         delivery_providers: Iterable[Any] | None = None,
+        profile_name: str | None = None,
     ) -> None:
         using_default_pipeline = stages is None
-        self.stages = list(load_pipeline() if using_default_pipeline else stages)
+        self.profile_name = (
+            resolve_profile_name(profile_name)
+            if using_default_pipeline
+            else profile_name
+        )
+        self.stages = list(
+            load_pipeline(self.profile_name) if using_default_pipeline else stages
+        )
         if delivery_providers is None:
             self.delivery_providers = list(
                 load_delivery_config() if using_default_pipeline else []
             )
         else:
             self.delivery_providers = list(delivery_providers)
+        if ledger_path is None:
+            if using_default_pipeline:
+                ledger_path = profile_ledger_path(self.profile_name)
+            else:
+                ledger_path = "output/ledger.json"
         self.ledger_path = Path(ledger_path)
 
     def run(self) -> RunResult:
@@ -115,8 +129,13 @@ class Planner:
             with self.ledger_path.open(encoding="utf-8") as ledger_file:
                 ledger = json.load(ledger_file)
             if ledger.get("date") == today:
+                if self.profile_name is not None:
+                    ledger["profile"] = self.profile_name
                 return ledger
-        return {"date": today, "stages": {}}
+        ledger = {"date": today, "stages": {}}
+        if self.profile_name is not None:
+            ledger["profile"] = self.profile_name
+        return ledger
 
     def _record(
         self,
@@ -293,10 +312,18 @@ def _format_cli_output(output: Any) -> str:
         return str(output)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     """Run the default configured pipeline once from the command line."""
+    parser = argparse.ArgumentParser(description="Run the configured infoPipeline once.")
+    parser.add_argument(
+        "--profile",
+        dest="profile_name",
+        help="Configured profile to run. Defaults to config/pipeline.yaml default_profile.",
+    )
+    args = parser.parse_args(argv)
+
     try:
-        result = Planner().run()
+        result = Planner(profile_name=args.profile_name).run()
     except Exception as error:
         print(f"Pipeline failed: {type(error).__name__}: {error}", file=sys.stderr)
         return 1
@@ -320,4 +347,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(sys.argv[1:]))

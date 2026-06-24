@@ -30,19 +30,42 @@ class PipelineConfigError(RuntimeError):
     """Raised when the pipeline configuration cannot be loaded or assembled."""
 
 
-def load_pipeline_config() -> list[Researcher | Curator | Writer]:
+PROFILE_PATH_FIELDS = {
+    "researcher": ("researcher_prompt_path", "prompt_path"),
+    "curator": ("curator_prompt_path", "prompt_path"),
+    "writer": ("writer_prompt_path", "prompt_path"),
+}
+WRITER_TEMPLATE_FIELD = "writer_template_path"
+
+
+def load_pipeline_config(profile_name: str | None = None) -> list[Researcher | Curator | Writer]:
     """Return configured stage instances in YAML order without running them."""
     config = _read_config()
+    selected_profile_name, profile = _select_profile(config, profile_name)
     stage_entries = config.get("stages") if isinstance(config, dict) else None
     if not isinstance(stage_entries, list):
         raise PipelineConfigError("Pipeline configuration must contain a stages list")
 
-    return [_assemble_stage(entry, index) for index, entry in enumerate(stage_entries)]
+    return [
+        _assemble_stage(entry, index, profile, selected_profile_name)
+        for index, entry in enumerate(stage_entries)
+    ]
 
 
-def load_pipeline() -> list[Researcher | Curator | Writer]:
+def load_pipeline(profile_name: str | None = None) -> list[Researcher | Curator | Writer]:
     """Return the stages assembled from the project's pipeline configuration."""
-    return load_pipeline_config()
+    return load_pipeline_config(profile_name)
+
+
+def resolve_profile_name(profile_name: str | None = None) -> str:
+    """Return the requested profile or configured default profile."""
+    selected_profile_name, _ = _select_profile(_read_config(), profile_name)
+    return selected_profile_name
+
+
+def profile_ledger_path(profile_name: str | None = None) -> Path:
+    """Return the profile-specific default ledger path for configured runs."""
+    return PROJECT_ROOT / "output" / _safe_profile_name(resolve_profile_name(profile_name)) / "ledger.json"
 
 
 def load_delivery_config() -> list[TelegramDelivery]:
@@ -78,7 +101,46 @@ def _read_config() -> Any:
         ) from error
 
 
-def _assemble_stage(entry: Any, index: int) -> Researcher | Curator | Writer:
+def _select_profile(
+    config: Any,
+    requested_profile_name: str | None,
+) -> tuple[str, dict[str, Any]]:
+    if not isinstance(config, dict):
+        raise PipelineConfigError("Pipeline configuration must be an object")
+
+    profiles = config.get("profiles")
+    if not isinstance(profiles, dict) or not profiles:
+        raise PipelineConfigError("Pipeline configuration must contain profiles")
+
+    if requested_profile_name is None:
+        default_profile = config.get("default_profile")
+        if not isinstance(default_profile, str) or not default_profile:
+            raise PipelineConfigError("Pipeline configuration is missing default_profile")
+        selected_profile_name = default_profile
+    else:
+        selected_profile_name = requested_profile_name
+
+    profile = profiles.get(selected_profile_name)
+    if not isinstance(profile, dict):
+        raise PipelineConfigError(f"Unknown profile: {selected_profile_name}")
+
+    return selected_profile_name, profile
+
+
+def _safe_profile_name(profile_name: str) -> str:
+    safe_name = "".join(
+        character if character.isalnum() or character in ("-", "_") else "-"
+        for character in profile_name.lower()
+    ).strip("-")
+    return safe_name or "profile"
+
+
+def _assemble_stage(
+    entry: Any,
+    index: int,
+    profile: dict[str, Any],
+    profile_name: str,
+) -> Researcher | Curator | Writer:
     if not isinstance(entry, dict):
         raise PipelineConfigError(f"Stage entry {index} must be an object")
 
@@ -88,9 +150,12 @@ def _assemble_stage(entry: Any, index: int) -> Researcher | Curator | Writer:
     if name not in STAGE_TYPES:
         raise PipelineConfigError(f"Unknown stage name: {name}")
 
-    prompt_path = entry.get("prompt_path")
+    profile_prompt_field, constructor_prompt_field = PROFILE_PATH_FIELDS[name]
+    prompt_path = profile.get(profile_prompt_field)
     if not isinstance(prompt_path, str) or not prompt_path:
-        raise PipelineConfigError(f"Stage {name} is missing required field: prompt_path")
+        raise PipelineConfigError(
+            f"Profile {profile_name} is missing required field: {profile_prompt_field}"
+        )
 
     resolved_prompt_path = PROJECT_ROOT / prompt_path
     if not resolved_prompt_path.is_file():
@@ -98,12 +163,12 @@ def _assemble_stage(entry: Any, index: int) -> Researcher | Curator | Writer:
             f"Configured prompt file does not exist for stage {name}: {resolved_prompt_path}"
         )
 
-    constructor_args: dict[str, Any] = {"prompt_path": resolved_prompt_path}
+    constructor_args: dict[str, Any] = {constructor_prompt_field: resolved_prompt_path}
     if name == "writer":
-        template_path = entry.get("template_path")
+        template_path = profile.get(WRITER_TEMPLATE_FIELD)
         if not isinstance(template_path, str) or not template_path:
             raise PipelineConfigError(
-                f"Stage {name} is missing required field: template_path"
+                f"Profile {profile_name} is missing required field: {WRITER_TEMPLATE_FIELD}"
             )
         resolved_template_path = PROJECT_ROOT / template_path
         if not resolved_template_path.is_file():

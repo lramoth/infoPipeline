@@ -1,17 +1,22 @@
+default_profile: techno
+
+profiles:
+  techno:
+    researcher_prompt_path: prompts/researchers/techno_news.md
+    curator_prompt_path: prompts/curators/polegroup_techno.md
+    writer_prompt_path: prompts/writers/outbound_brief.md
+    writer_template_path: prompts/writers/template.md
+
 stages:
   - name: researcher
-    prompt_path: prompts/researchers/techno_news.md
     model:
       provider: gemini
       name: gemini-2.5-flash
   - name: curator
-    prompt_path: prompts/curators/polegroup_techno.md
     model:
       provider: gemini
       name: gemini-2.5-flash
   - name: writer
-    prompt_path: prompts/writers/outbound_brief.md
-    template_path: prompts/writers/template.md
     model:
       provider: ollama
       name: gemma4:e4b

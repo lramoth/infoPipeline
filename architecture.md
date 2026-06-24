@@ -9,7 +9,8 @@ the configured delivery providers on schedule.
 ## Components
 
 The default pipeline is assembled from `config/pipeline.yaml`, which defines
-stage order, prompt paths, model settings, and enabled delivery providers.
+stage order, selectable profiles, model settings, and enabled delivery
+providers. Each profile supplies the prompt and template paths for one topic.
 
 Five conceptual pieces make up the configured pipeline. Only three involve an
 LLM call — the Planner and Delivery pieces are plain code.
@@ -34,12 +35,18 @@ LLM call — the Planner and Delivery pieces are plain code.
 ## Configuration
 
 `config/pipeline.yaml` is the source of truth for the default pipeline. It
-defines stage order, each stage's prompt path, model provider/name/endpoint
-settings, Writer's template path, and enabled delivery providers.
+defines stage order, selectable profiles, model provider/name/endpoint
+settings, and enabled delivery providers. A profile supplies Researcher,
+Curator, Writer prompt paths, and Writer's template path.
 
 Prompt and template paths are supplied through configuration rather than Python
 source defaults. This keeps Researcher, Curator, and Writer reusable across
 topics and presentations without changing source code.
+
+Callers may select a profile when invoking the command-line entry point. When
+no profile is selected, the configured `default_profile` is used. Profile runs
+write to profile-specific ledger locations so separate scheduled jobs do not
+overwrite each other's same-day run records.
 
 ## Writer Template Contract
 
@@ -107,14 +114,16 @@ edit, rank, filter, or summarize the Writer's outbound message.
 
 ## Ledger
 
-`output/ledger.json` records the current day's stage status, stage output,
-validation reason, delivery outcomes, timestamps, and any diagnostic file path.
-When a stage fails or produces invalid output, best-effort diagnostic JSON files
-are written under `output/diagnostics/...`.
+Each profile ledger records the current day's selected profile, stage status,
+stage output, validation reason, delivery outcomes, timestamps, and any
+diagnostic file path. When a stage fails or produces invalid output,
+best-effort diagnostic JSON files are written under that profile's diagnostics
+directory.
 
 ```json
 {
   "date": "2026-06-20",
+  "profile": "<profile_name>",
   "stages": {
     "<stage_name>": {
       "status": "done" | "failed",

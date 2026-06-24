@@ -408,3 +408,10 @@
 - Scenario 6, Runtime Behavior Is Unchanged: PASS — prompt and template files retain their original names and content, `config/pipeline.yaml` continues to declare the same configured paths, and no Gemini, Ollama, or delivery behavior changed.
 - Scenario 7, Repository Tests Still Pass Without Live External Calls: PASS — all 103 repository tests pass using mocks and controlled inputs, covering configured prompt-path behavior, Writer template-path behavior, and missing path and missing file failures, without any live Gemini, Ollama, or Telegram call.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/profile_selection_feature.md`.
+- Summary of work completed: The command-line pipeline can now run a selected configured profile, or use the configured default profile when none is supplied. Profiles provide the Researcher, Curator, Writer prompt, and Writer template paths used for a run, unknown or incomplete profiles fail before stages run, each configured profile uses a profile-specific ledger location, and ledgers record the selected profile so same-day profile runs do not overwrite each other.
+- Assumptions made: Profile-specific ledger locations are derived from the selected profile name under `output/<profile>/ledger.json`. The existing configured topic is represented as the default `techno` profile. No new prompt files, prompt content, model behavior, or delivery behavior were added or changed. No new dependencies were added.
+- Gaps or suspected bugs: None.

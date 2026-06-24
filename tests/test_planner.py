@@ -237,7 +237,7 @@ class PlannerTests(unittest.TestCase):
             patch("planner.load_delivery_config", return_value=[]) as load_delivery_config:
             result = Planner(ledger_path=self.ledger_path).run()
 
-        load_pipeline.assert_called_once_with()
+        load_pipeline.assert_called_once_with("techno")
         load_delivery_config.assert_called_once_with()
         self.assertTrue(result.succeeded)
         self.assertEqual(result.output, "final output")
@@ -245,6 +245,23 @@ class PlannerTests(unittest.TestCase):
             list(self.read_ledger()["stages"]),
             ["researcher", "writer"],
         )
+
+    def test_default_config_uses_profile_specific_ledger_and_records_profile(self):
+        configured_stages = [
+            Stage("writer", lambda: "profile output", lambda output: (True, "passed")),
+        ]
+        profile_ledger = Path(self.temporary_directory.name) / "output" / "finance" / "ledger.json"
+
+        with patch("planner.resolve_profile_name", return_value="finance"), \
+            patch("planner.load_pipeline", return_value=configured_stages), \
+            patch("planner.load_delivery_config", return_value=[]), \
+            patch("planner.profile_ledger_path", return_value=profile_ledger):
+            result = Planner(profile_name="finance").run()
+
+        self.assertTrue(result.succeeded)
+        ledger = json.loads(profile_ledger.read_text(encoding="utf-8"))
+        self.assertEqual(ledger["profile"], "finance")
+        self.assertEqual(ledger["stages"]["writer"]["status"], "done")
 
     def test_invalid_stage_is_reported_and_halts_remaining_stages(self):
         ran_last_stage = False
@@ -484,7 +501,7 @@ class PlannerTests(unittest.TestCase):
             "run",
             return_value=RunResult(True, "final message"),
         ), redirect_stdout(stdout), redirect_stderr(stderr):
-            exit_code = main()
+            exit_code = main([])
 
         self.assertEqual(exit_code, 0)
         self.assertEqual(stdout.getvalue(), "final message\n")
@@ -498,7 +515,7 @@ class PlannerTests(unittest.TestCase):
             "run",
             return_value=RunResult(False, failed_stage="writer", reason="bad format"),
         ), redirect_stdout(stdout), redirect_stderr(stderr):
-            exit_code = main()
+            exit_code = main([])
 
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "")
@@ -517,7 +534,7 @@ class PlannerTests(unittest.TestCase):
                 reason="network down",
             ),
         ), redirect_stdout(stdout), redirect_stderr(stderr):
-            exit_code = main()
+            exit_code = main([])
 
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "final message\n")
@@ -528,11 +545,24 @@ class PlannerTests(unittest.TestCase):
         stderr = StringIO()
         with patch("planner.Planner", side_effect=RuntimeError("missing config")), \
             redirect_stdout(stdout), redirect_stderr(stderr):
-            exit_code = main()
+            exit_code = main([])
 
         self.assertEqual(exit_code, 1)
         self.assertEqual(stdout.getvalue(), "")
         self.assertIn("Pipeline failed: RuntimeError: missing config", stderr.getvalue())
+
+    def test_cli_passes_profile_to_planner(self):
+        stdout = StringIO()
+        stderr = StringIO()
+        with patch("planner.Planner") as planner_class, \
+            redirect_stdout(stdout), redirect_stderr(stderr):
+            planner_class.return_value.run.return_value = RunResult(True, "profile message")
+            exit_code = main(["--profile", "finance"])
+
+        planner_class.assert_called_once_with(profile_name="finance")
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stdout.getvalue(), "profile message\n")
+        self.assertEqual(stderr.getvalue(), "")
 
 
 if __name__ == "__main__":
