@@ -31,6 +31,42 @@ LLM call — the Planner and Delivery pieces are plain code.
   enabled delivery providers after all configured stages succeed. Telegram is
   the currently implemented provider.
 
+## Configuration
+
+`config/pipeline.yaml` is the source of truth for the default pipeline. It
+defines stage order, each stage's prompt path, model provider/name/endpoint
+settings, Writer's template path, and enabled delivery providers.
+
+Prompt and template paths are supplied through configuration rather than Python
+source defaults. This keeps Researcher, Curator, and Writer reusable across
+topics and presentations without changing source code.
+
+## Writer Template Contract
+
+Writer uses a markdown template to assemble the final outbound message. The
+template has a message-level section containing `{items}` and an item-level
+section introduced by `# Item Template`. The item-level section must include
+`{title}`, `{note}`, and `{url}`.
+
+```markdown
+Daily briefing
+
+{items}
+
+# Item Template
+
+• {title}
+
+{note}
+
+Source:
+{url}
+```
+
+Curator output remains authoritative for item titles, source URLs, and rank
+order. The local model supplies only per-item prose used as `{note}`; Python
+assembles the final message from the configured template.
+
 ## Data flow
 
 ```
