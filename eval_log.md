@@ -396,3 +396,15 @@
 - Summary of work completed: Active pipeline configuration tests now prove that Researcher, Curator, and Writer prompt paths and Writer template paths are honored from configuration using arbitrary valid fixture filenames, including non-default Writer prompt and template filenames. Default configuration checks continue to confirm that referenced prompt and template files exist without requiring exact filenames, and existing configured path validation failures remain covered.
 - Assumptions made: Runtime configuration, prompt files, template files, and prompt/template content were left unchanged because the spec only changed active test expectations. No new dependencies were added.
 - Gaps or suspected bugs: None.
+
+## Evaluation — 2026-06-24
+
+- Eval file used: `evals/config_path_filename_agnostic_tests_feature.eval.md`.
+- Scenario 1, Config Tests Use Arbitrary Valid Filenames For All Stage Paths: PASS — all four controlled fixture filenames differ from their current defaults: the controlled Researcher, Curator, Writer prompt, and Writer template fixture files use names that do not match the default filenames declared in `config/pipeline.yaml`.
+- Scenario 2, Configured Paths Are Honored Exactly: PASS — the pipeline configuration test assembles stages with arbitrary non-default fixture filenames and verifies that each assembled stage carries the exact prompt and template paths declared in the controlled configuration, with stage order matching the declaration order.
+- Scenario 3, Default Config Checks Are Filename-Agnostic: PASS — the default configuration check confirms that each configured prompt file and the configured Writer template file exist on disk without asserting any specific filename, and passes with the current filenames in place.
+- Scenario 4, Missing Path Failures Remain Covered: PASS — omitting a prompt path from a prompt-driven stage, or omitting the Writer template path, fails with a readable configuration error and no source-level fallback applies.
+- Scenario 5, Missing File Failures Remain Covered: PASS — a configured prompt path or configured Writer template path pointing to a nonexistent file fails with a readable configuration error and no source-level fallback applies.
+- Scenario 6, Runtime Behavior Is Unchanged: PASS — prompt and template files retain their original names and content, `config/pipeline.yaml` continues to declare the same configured paths, and no Gemini, Ollama, or delivery behavior changed.
+- Scenario 7, Repository Tests Still Pass Without Live External Calls: PASS — all 103 repository tests pass using mocks and controlled inputs, covering configured prompt-path behavior, Writer template-path behavior, and missing path and missing file failures, without any live Gemini, Ollama, or Telegram call.
+- Overall verdict: PASS.
