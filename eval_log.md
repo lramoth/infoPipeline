@@ -484,3 +484,10 @@
 - Scenario 9, Existing Provider Support Remains Unchanged: PASS — Researcher and Curator continue to support Gemini and OpenAI, Writer continues to support only Ollama, unsupported provider combinations continue to fail with readable errors, and all existing stage output contracts remain unchanged.
 - Scenario 10, Automated Tests Avoid Live External Calls: PASS — configured endpoint behavior, missing endpoint failures, and invalid endpoint failures are all covered with controlled inputs and mocked provider responses; all 125 repository tests pass without requiring any live Gemini, OpenAI, Ollama, or Telegram call.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/openai_debugging_feature.md`.
+- Summary of work completed: Each pipeline invocation now leaves a ledger containing only the latest run's stage and delivery records. OpenAI-backed research now requires provider web search and requests available source context. If Researcher receives a model response with no research items, the run fails at Researcher, later stages do not run, and a local diagnostic preserves bounded non-secret context about the empty provider output.
+- Assumptions made: The existing diagnostic directory is preserved between runs because the spec only requires clearing stale ledger records and diagnostic pointers. Zero-item handling was applied to Researcher model output generally, including Gemini, while the OpenAI-specific request behavior was limited to OpenAI. No new dependencies were added.
+- Gaps or suspected bugs: Real OpenAI, Gemini, Ollama, and Telegram endpoints were not called during implementation; live-provider confirmation remains for a separate evaluation session.

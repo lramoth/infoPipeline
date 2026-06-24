@@ -12,6 +12,7 @@ from unittest.mock import patch
 from curator import Curator
 from delivery import DeliveryResult
 from planner import Planner, RunResult, Stage, main
+from researcher import Researcher
 from writer import Writer
 
 
@@ -310,7 +311,7 @@ class PlannerTests(unittest.TestCase):
         self.assertNotIn("old", ledger["stages"])
         self.assertIn("new", ledger["stages"])
 
-    def test_reuses_todays_ledger_and_overwrites_rerun_stage(self):
+    def test_starts_fresh_ledger_for_each_run(self):
         self.ledger_path.parent.mkdir(parents=True)
         self.ledger_path.write_text(
             json.dumps(
@@ -319,6 +320,9 @@ class PlannerTests(unittest.TestCase):
                     "stages": {
                         "keep": {"status": "done"},
                         "rerun": {"status": "failed", "output": "old"},
+                    },
+                    "delivery": {
+                        "telegram": {"status": "done", "reason": "old delivery"},
                     },
                 }
             ),
@@ -331,9 +335,10 @@ class PlannerTests(unittest.TestCase):
         ).run()
 
         ledger = self.read_ledger()
-        self.assertIn("keep", ledger["stages"])
+        self.assertNotIn("keep", ledger["stages"])
         self.assertEqual(ledger["stages"]["rerun"]["status"], "done")
         self.assertEqual(ledger["stages"]["rerun"]["output"], "new")
+        self.assertNotIn("delivery", ledger)
 
     def test_run_error_fails_stage_and_halts(self):
         ran_last_stage = False
@@ -434,6 +439,67 @@ class PlannerTests(unittest.TestCase):
         self.assertIn("temporarily unavailable", diagnostic_text)
         self.assertNotIn("test-key", diagnostic_text)
         self.assertNotIn("X-goog-api-key", diagnostic_text)
+
+    def test_openai_zero_item_researcher_output_stops_before_curator_with_diagnostic_context(self):
+        env_path = Path(self.temporary_directory.name) / ".env"
+        env_path.write_text("OPENAI_API_KEY=openai-key\n", encoding="utf-8")
+        prompt_path = Path(self.temporary_directory.name) / "research.md"
+        prompt_path.write_text("research", encoding="utf-8")
+        response = {
+            "output": [
+                {
+                    "type": "web_search_call",
+                    "id": "search_1",
+                    "status": "completed",
+                    "action": {
+                        "type": "search",
+                        "sources": [{"url": "https://source.example/item"}],
+                    },
+                },
+                {
+                    "type": "message",
+                    "content": [{"type": "output_text", "text": "[]"}],
+                },
+            ]
+        }
+        ran_curator = False
+
+        def curator_run(items):
+            nonlocal ran_curator
+            ran_curator = True
+            return items
+
+        with patch(
+            "researcher.urllib.request.urlopen",
+            return_value=FakeResponse(json.dumps(response).encode("utf-8")),
+        ):
+            result = Planner(
+                [
+                    Researcher(
+                        provider="openai",
+                        model="gpt-4.1-mini",
+                        endpoint="https://openai.example/responses",
+                        env_path=env_path,
+                        prompt_path=prompt_path,
+                    ),
+                    Stage("curator", curator_run, lambda output: (True, "passed")),
+                ],
+                self.ledger_path,
+            ).run()
+
+        self.assertFalse(result.succeeded)
+        self.assertEqual(result.failed_stage, "researcher")
+        self.assertIn("no research items", result.reason)
+        self.assertFalse(ran_curator)
+        ledger = self.read_ledger()
+        self.assertEqual(list(ledger["stages"]), ["researcher"])
+        diagnostic = self.read_diagnostic("researcher")
+        self.assertEqual(diagnostic["failure_category"], "model_output_empty")
+        self.assertEqual(diagnostic["provider_name"], "OpenAI")
+        self.assertEqual(diagnostic["model_name"], "gpt-4.1-mini")
+        self.assertEqual(diagnostic["raw_model_text_preview"], "[]")
+        self.assertIn("search_1", diagnostic["provider_search_context_preview"])
+        self.assertNotIn("openai-key", json.dumps(diagnostic))
 
     def test_ollama_failure_records_local_endpoint_and_error_message(self):
         prompt_path = Path(self.temporary_directory.name) / "writer.md"

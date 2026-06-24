@@ -116,6 +116,20 @@ class Researcher:
                 },
             ) from error
 
+        if not items:
+            raise ResearcherError(
+                "Gemini API search produced no research items",
+                {
+                    "failure_category": "model_output_empty",
+                    "provider_name": "Gemini",
+                    "model_name": self.model,
+                    "endpoint_url": request.full_url,
+                    "http_method": request.get_method(),
+                    "raw_model_text_preview": response_text,
+                    "provider_search_context_preview": candidate.get("groundingMetadata"),
+                },
+            )
+
         return {
             "items": items,
             "grounding_metadata": candidate.get("groundingMetadata"),
@@ -128,7 +142,8 @@ class Researcher:
             "model": self.model,
             "input": prompt,
             "tools": [{"type": "web_search"}],
-            "include": ["web_search_call.results"],
+            "tool_choice": "required",
+            "include": ["web_search_call.action.sources"],
         }
         request = urllib.request.Request(
             self.endpoint,
@@ -179,9 +194,24 @@ class Researcher:
                 },
             ) from error
 
+        provider_metadata = _extract_openai_metadata(api_response)
+        if not items:
+            raise ResearcherError(
+                f"{provider_name} API search produced no research items",
+                {
+                    "failure_category": "model_output_empty",
+                    "provider_name": provider_name,
+                    "model_name": self.model,
+                    "endpoint_url": request.full_url,
+                    "http_method": request.get_method(),
+                    "raw_model_text_preview": response_text,
+                    "provider_search_context_preview": provider_metadata,
+                },
+            )
+
         return {
             "items": items,
-            "grounding_metadata": _extract_openai_metadata(api_response),
+            "grounding_metadata": provider_metadata,
         }
 
     @staticmethod

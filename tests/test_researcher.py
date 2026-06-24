@@ -118,6 +118,8 @@ class ResearcherTests(unittest.TestCase):
         self.assertEqual(request_body["model"], "gpt-4.1-mini")
         self.assertEqual(request_body["input"], "custom research prompt")
         self.assertEqual(request_body["tools"], [{"type": "web_search"}])
+        self.assertEqual(request_body["tool_choice"], "required")
+        self.assertEqual(request_body["include"], ["web_search_call.action.sources"])
         self.assertEqual(output["items"], items)
         self.assertEqual(output["grounding_metadata"]["web_search_calls"][0]["id"], "search_1")
 
@@ -228,6 +230,29 @@ class ResearcherTests(unittest.TestCase):
 
         self.assertFalse(passed)
         self.assertIn("fewer than 3", reason)
+
+    def test_openai_zero_item_response_reports_provider_context(self):
+        self.env_path.write_text("OPENAI_API_KEY=openai-key\n", encoding="utf-8")
+
+        with patch(
+            "researcher.urllib.request.urlopen",
+            return_value=FakeResponse(make_openai_response("[]")),
+        ):
+            with self.assertRaisesRegex(ResearcherError, "OpenAI API search produced no research items") as error:
+                Researcher(
+                    provider="openai",
+                    model="gpt-4.1-mini",
+                    endpoint=self.openai_endpoint,
+                    env_path=self.env_path,
+                    prompt_path=self.prompt_path,
+                ).run()
+
+        context = error.exception.diagnostic_context
+        self.assertEqual(context["failure_category"], "model_output_empty")
+        self.assertEqual(context["provider_name"], "OpenAI")
+        self.assertEqual(context["model_name"], "gpt-4.1-mini")
+        self.assertEqual(context["raw_model_text_preview"], "[]")
+        self.assertEqual(context["provider_search_context_preview"]["web_search_calls"][0]["id"], "search_1")
 
     def test_validation_fails_when_an_item_lacks_a_required_field(self):
         output = {

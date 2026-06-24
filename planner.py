@@ -125,13 +125,6 @@ class Planner:
         return RunResult(True, previous_output, delivery_results=delivery_results)
 
     def _load_ledger(self, today: str) -> dict[str, Any]:
-        if self.ledger_path.exists():
-            with self.ledger_path.open(encoding="utf-8") as ledger_file:
-                ledger = json.load(ledger_file)
-            if ledger.get("date") == today:
-                if self.profile_name is not None:
-                    ledger["profile"] = self.profile_name
-                return ledger
         ledger = {"date": today, "stages": {}}
         if self.profile_name is not None:
             ledger["profile"] = self.profile_name
