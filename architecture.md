@@ -5,7 +5,7 @@ A daily automated pipeline that searches for techno production news
 (labels, gear, artists — Polegroup-adjacent aesthetic, hardware relevant to
 a Eurorack/classic-drum-machine studio setup), curates it down to what's
 actually worth seeing by applying personal taste, formats it into a clean
-message, and delivers it via Telegram every morning.
+outbound message, and delivers it via Telegram every morning.
 
 ## Components
 
@@ -23,7 +23,7 @@ plain code.
   judgment: distinguishing Polegroup-adjacent signal from generic festival
   noise, deduping, applying taste criteria simultaneously.
 - **Writer** (local `gemma4:e4b` via Ollama) — formats the curator's
-  ranked, reasoned list into the final Telegram message. Not a hard
+  ranked, reasoned list into the final outbound message. Not a hard
   reasoning task — local is fine.
 
 ## Data flow
@@ -46,7 +46,7 @@ Planner ──▶ Researcher ──▶ Curator ──▶ Writer
                       advances
                           │
                           ▼
-                Telegram message sent
+          Outbound message sent via Telegram
 ```
 
 Each stage is validated before the next runs. A failed check halts the

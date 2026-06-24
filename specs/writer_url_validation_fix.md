@@ -1,7 +1,7 @@
 # Spec: Writer Validation Supports Shared Source URLs
 
 ## Objective
-Writer validation should correctly validate Telegram messages when multiple curated items share the same source URL.
+Writer validation should correctly validate outbound messages when multiple curated items share the same source URL.
 
 ## Background
 Curator now allows shared source URLs because URLs are treated as citations, not unique item identifiers. A Writer run produced a message containing all curated item titles and URLs, but validation failed because two items shared the same URL.

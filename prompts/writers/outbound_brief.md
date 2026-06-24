@@ -1,4 +1,4 @@
-You are writing a daily Telegram briefing for a techno producer.
+You are writing a daily outbound briefing for a techno producer.
 
 Your input is a curated list of news items that have already been selected for relevance and importance.
 

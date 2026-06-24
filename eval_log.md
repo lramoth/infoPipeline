@@ -264,3 +264,10 @@
 - Scenario 6, Missing Summary Text: PASS — a message where an item section contains a title and source URL but no summary text is rejected.
 - Scenario 7, Items Out Of Rank Order: PASS — a message where items appear out of ascending rank order is rejected.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-24
+
+- Spec used: `specs/outbound_message_terminology_cleanup.md`.
+- Summary of work completed: The Writer now describes and validates its output as an outbound message, uses a destination-agnostic default prompt path, and keeps producing the same final message string for the current pipeline. The default Writer prompt now asks for an outbound briefing, pipeline configuration points to the renamed Writer prompt, Writer tests describe outbound-message behavior, and documentation no longer describes the Writer as producing a Telegram message.
+- Assumptions made: Historical eval entries and append-only build logs were left unchanged, while current Writer contract, prompt, configuration, tests, and Writer-related documentation were updated. No new dependencies were added.
+- Gaps or suspected bugs: None.

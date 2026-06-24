@@ -35,8 +35,8 @@ def make_curator_item(rank: int, url: str | None = None) -> dict:
     }
 
 
-def make_telegram_message(items: list[dict]) -> str:
-    """Build a synthetic Telegram message in the given item order."""
+def make_outbound_message(items: list[dict]) -> str:
+    """Build a synthetic outbound message in the given item order."""
     lines = ["🎛 Techno Briefing", ""]
     for item in items:
         lines.append(f"• {item['title']}")
@@ -52,15 +52,15 @@ def make_telegram_message(items: list[dict]) -> str:
 class WriterTests(unittest.TestCase):
     def setUp(self):
         self.temporary_directory = tempfile.TemporaryDirectory()
-        self.prompt_path = Path(self.temporary_directory.name) / "telegram_brief.md"
-        self.prompt_path.write_text("You are a Telegram writer.", encoding="utf-8")
+        self.prompt_path = Path(self.temporary_directory.name) / "outbound_brief.md"
+        self.prompt_path.write_text("You are an outbound writer.", encoding="utf-8")
 
     def tearDown(self):
         self.temporary_directory.cleanup()
 
     def test_sends_curator_items_and_prompt_to_ollama_and_returns_message(self):
         items = [make_curator_item(1), make_curator_item(2)]
-        message = make_telegram_message(sorted(items, key=lambda x: x["rank"]))
+        message = make_outbound_message(sorted(items, key=lambda x: x["rank"]))
 
         with patch(
             "writer.urllib.request.urlopen",
@@ -69,14 +69,14 @@ class WriterTests(unittest.TestCase):
             result = Writer(prompt_path=self.prompt_path).run(items)
 
         request_body = json.loads(urlopen.call_args.args[0].data)
-        self.assertIn("You are a Telegram writer.", request_body["prompt"])
+        self.assertIn("You are an outbound writer.", request_body["prompt"])
         self.assertIn(json.dumps(items, indent=2), request_body["prompt"])
         self.assertIsInstance(result, str)
         self.assertEqual(result, message)
 
     def test_uses_default_prompt_when_no_prompt_path_given(self):
         items = [make_curator_item(1)]
-        message = make_telegram_message(items)
+        message = make_outbound_message(items)
 
         with patch(
             "writer.urllib.request.urlopen",
@@ -85,7 +85,7 @@ class WriterTests(unittest.TestCase):
             Writer().run(items)
 
         request_body = json.loads(urlopen.call_args.args[0].data)
-        self.assertIn("Telegram briefing", request_body["prompt"])
+        self.assertIn("outbound briefing", request_body["prompt"])
 
     def test_empty_curator_items_raises_writer_error(self):
         with self.assertRaisesRegex(WriterError, "empty"):
@@ -122,7 +122,7 @@ class WriterTests(unittest.TestCase):
 
     def test_validation_succeeds_for_complete_message_with_all_items(self):
         items = [make_curator_item(1), make_curator_item(2)]
-        message = make_telegram_message(sorted(items, key=lambda x: x["rank"]))
+        message = make_outbound_message(sorted(items, key=lambda x: x["rank"]))
 
         passed, reason = Writer.validate(message, items)
 
@@ -131,7 +131,7 @@ class WriterTests(unittest.TestCase):
     def test_validation_succeeds_when_items_share_url_in_each_section(self):
         shared_url = "https://example.com/shared-source"
         items = [make_curator_item(1, shared_url), make_curator_item(2, shared_url)]
-        message = make_telegram_message(sorted(items, key=lambda x: x["rank"]))
+        message = make_outbound_message(sorted(items, key=lambda x: x["rank"]))
 
         passed, reason = Writer.validate(message, items)
 
@@ -196,7 +196,7 @@ class WriterTests(unittest.TestCase):
 
     def test_validation_fails_when_items_are_not_in_ascending_rank_order(self):
         items = [make_curator_item(1), make_curator_item(2)]
-        message = make_telegram_message(sorted(items, key=lambda x: x["rank"], reverse=True))
+        message = make_outbound_message(sorted(items, key=lambda x: x["rank"], reverse=True))
 
         passed, reason = Writer.validate(message, items)
 
@@ -205,7 +205,7 @@ class WriterTests(unittest.TestCase):
 
     def test_loads_configured_prompt_at_run_time(self):
         items = [make_curator_item(1)]
-        message = make_telegram_message(items)
+        message = make_outbound_message(items)
         self.prompt_path.write_text("updated writer prompt", encoding="utf-8")
 
         with patch(

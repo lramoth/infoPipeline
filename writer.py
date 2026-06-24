@@ -14,15 +14,15 @@ from prompt_loader import PromptLoadError, load_prompt
 
 OLLAMA_MODEL = "gemma4:e4b"
 OLLAMA_ENDPOINT = "http://localhost:11434/api/generate"
-DEFAULT_PROMPT_PATH = Path(__file__).parent / "prompts" / "writers" / "telegram_brief.md"
+DEFAULT_PROMPT_PATH = Path(__file__).parent / "prompts" / "writers" / "outbound_brief.md"
 
 
 class WriterError(DiagnosticError):
-    """Raised when the Writer cannot produce a Telegram message."""
+    """Raised when the Writer cannot produce an outbound message."""
 
 
 class Writer:
-    """Format curated items into a Telegram-ready message via local Ollama."""
+    """Format curated items into an outbound message via local Ollama."""
 
     def __init__(
         self,
@@ -35,7 +35,7 @@ class Writer:
         self.prompt_path = Path(prompt_path)
 
     def run(self, items: list[dict[str, Any]]) -> str:
-        """Format curated items into a Telegram message and return it."""
+        """Format curated items into an outbound message and return it."""
         if not items:
             raise WriterError("Curator output is empty — no items to format")
 
@@ -101,7 +101,7 @@ class Writer:
 
             title_pos = output.find(title)
             if title_pos == -1:
-                return False, f"Item title missing from Telegram message: {title!r}"
+                return False, f"Item title missing from outbound message: {title!r}"
 
             title_positions.append(title_pos)
 
@@ -125,11 +125,11 @@ class Writer:
 
             url_pos = section.find(url)
             if url_pos == -1:
-                return False, f"Item URL missing from Telegram message: {url!r}"
+                return False, f"Item URL missing from outbound message: {url!r}"
 
             between = section[:url_pos].strip()
             between_cleaned = between.replace("Source:", "").strip()
             if not between_cleaned:
-                return False, f"Item is missing summary text in Telegram message: {title!r}"
+                return False, f"Item is missing summary text in outbound message: {title!r}"
 
-        return True, "Telegram message contains all curator items in ascending rank order with title, URL, and summary"
+        return True, "Outbound message contains all curator items in ascending rank order with title, URL, and summary"

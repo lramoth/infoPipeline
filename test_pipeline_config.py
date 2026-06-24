@@ -19,7 +19,7 @@ class PipelineConfigTests(unittest.TestCase):
         for relative_path in (
             "prompts/researchers/techno_news.md",
             "prompts/curators/polegroup_techno.md",
-            "prompts/writers/telegram_brief.md",
+            "prompts/writers/outbound_brief.md",
         ):
             prompt_path = self.project_root / relative_path
             prompt_path.parent.mkdir(parents=True, exist_ok=True)
@@ -44,7 +44,7 @@ class PipelineConfigTests(unittest.TestCase):
         self.write_config(
             """stages:
   - name: writer
-    prompt_path: prompts/writers/telegram_brief.md
+    prompt_path: prompts/writers/outbound_brief.md
     model:
       provider: ollama
       name: custom-writer
@@ -65,7 +65,7 @@ class PipelineConfigTests(unittest.TestCase):
         self.assertEqual(
             [stage.prompt_path for stage in stages],
             [
-                self.project_root / "prompts/writers/telegram_brief.md",
+                self.project_root / "prompts/writers/outbound_brief.md",
                 self.project_root / "prompts/researchers/techno_news.md",
                 self.project_root / "prompts/curators/polegroup_techno.md",
             ],
@@ -131,7 +131,7 @@ class DefaultPipelineConfigTests(unittest.TestCase):
             [
                 "prompts/researchers/techno_news.md",
                 "prompts/curators/polegroup_techno.md",
-                "prompts/writers/telegram_brief.md",
+                "prompts/writers/outbound_brief.md",
             ],
         )
 

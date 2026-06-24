@@ -18,7 +18,7 @@ This feature introduces a pipeline configuration file that describes which stage
 - The default pipeline config includes:
     - Researcher using prompts/researchers/techno_news.md
     - Curator using prompts/curators/polegroup_techno.md
-    - Writer using prompts/writers/telegram_brief.md
+    - Writer using prompts/writers/outbound_brief.md
 - Stage entries may contain a model object
 - A model object contains provider and name
 - Local model providers may contain endpoint
@@ -38,7 +38,7 @@ stages:
         provider: gemini
         name: gemini-2.5-flash
   - name: writer
-    prompt_path: prompts/writers/telegram_brief.md
+    prompt_path: prompts/writers/outbound_brief.md
     model: 
         provider: ollama
         name: gemma4:e4b

@@ -10,7 +10,7 @@ stages:
       provider: gemini
       name: gemini-2.5-flash
   - name: writer
-    prompt_path: prompts/writers/telegram_brief.md
+    prompt_path: prompts/writers/outbound_brief.md
     model:
       provider: ollama
       name: gemma4:e4b
