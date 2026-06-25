@@ -75,7 +75,13 @@ Do not stop after finding only a few valid items.
 
 The Curator will later determine which releases deserve inclusion.
 
-Return between **6 and 15** candidate releases whenever possible.
+Return the strongest candidate items found, even if fewer than 6 exist.
+
+If no exact last-24-hour matches exist, expand to the last 7 days and clearly state the release date in the summary.
+
+Never return a prose explanation.
+
+Always return item records only.
 
 Each candidate must contain:
 
@@ -83,17 +89,16 @@ Title:
 Summary:
 
 Do not invent facts.
+Do not create duplicate items.
 
-Do not include URLs in the response text.
+Do not type source URLs into the item text. Source URLs are provided by the search grounding metadata.
 
-Source URLs will be provided separately through grounding metadata.
-
-Respond ONLY using this format:
+Respond with ONLY item records in this exact format:
 
 ITEM 1
-Title:
-Summary:
+Title: short headline
+Summary: one sentence
 
 ITEM 2
-Title:
-Summary:
+Title: short headline
+Summary: one sentence
