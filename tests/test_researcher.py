@@ -68,7 +68,7 @@ class ResearcherTests(unittest.TestCase):
     def tearDown(self):
         self.temporary_directory.cleanup()
 
-    def test_searches_gemini_and_preserves_grounding_metadata(self):
+    def test_searches_gemini_and_records_compact_provider_context(self):
         items = [
             {"title": f"Item {number}", "summary": "News."}
             for number in range(3)
@@ -84,7 +84,7 @@ class ResearcherTests(unittest.TestCase):
         }
 
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.gemini.urllib.request.urlopen",
             return_value=FakeResponse(json.dumps(response).encode("utf-8")),
         ) as urlopen:
             output = Researcher(
@@ -113,12 +113,13 @@ class ResearcherTests(unittest.TestCase):
                 for number in range(3)
             ],
         )
-        self.assertEqual(
-            output["grounding_metadata"]["groundingChunks"][0]["uri"],
-            "https://grounded.example.com/0",
-        )
+        self.assertNotIn("grounding_metadata", output)
         self.assertEqual(output["raw_provider_response"]["provider"], "Gemini")
         self.assertIn("groundingChunks", output["raw_provider_response"]["response_preview"])
+        self.assertEqual(
+            output["raw_provider_response"]["search_context"]["groundingChunks"][0]["uri"],
+            "https://grounded.example.com/0",
+        )
         self.assertEqual(
             output["normalization"]["url_source"],
             "provider_grounding_metadata",
@@ -132,7 +133,7 @@ class ResearcherTests(unittest.TestCase):
         ]
 
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.openai.urllib.request.urlopen",
             return_value=FakeResponse(make_openai_response(json.dumps(items))),
         ) as urlopen:
             output = Researcher(
@@ -164,7 +165,7 @@ class ResearcherTests(unittest.TestCase):
         response = json.dumps({"output_text": json.dumps(items)}).encode("utf-8")
 
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.openai.urllib.request.urlopen",
             return_value=FakeResponse(response),
         ):
             output = Researcher(
@@ -186,7 +187,7 @@ class ResearcherTests(unittest.TestCase):
         grounding_metadata = make_grounding_metadata()
 
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.gemini.urllib.request.urlopen",
             return_value=FakeResponse(make_api_response(model_text, grounding_metadata)),
         ):
             output = Researcher(
@@ -208,7 +209,7 @@ class ResearcherTests(unittest.TestCase):
         grounding_metadata = make_grounding_metadata()
 
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.gemini.urllib.request.urlopen",
             return_value=FakeResponse(make_api_response(model_text, grounding_metadata)),
         ):
             output = Researcher(
@@ -237,7 +238,7 @@ Summary: Third summary.
 """
 
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.gemini.urllib.request.urlopen",
             return_value=FakeResponse(make_api_response(model_text, make_grounding_metadata())),
         ):
             output = Researcher(
@@ -269,7 +270,7 @@ Summary: Third summary.
 
     def test_rejects_research_response_without_valid_structured_data(self):
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.gemini.urllib.request.urlopen",
             return_value=FakeResponse(
                 make_api_response("Here are three useful articles.", make_grounding_metadata())
             ),
@@ -286,7 +287,7 @@ Summary: Third summary.
 
     def test_rejects_malformed_research_structured_data(self):
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.gemini.urllib.request.urlopen",
             return_value=FakeResponse(make_api_response('[{"title": "A"', make_grounding_metadata())),
         ):
             with self.assertRaisesRegex(
@@ -306,7 +307,7 @@ Summary: Third summary.
         ]
 
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.gemini.urllib.request.urlopen",
             return_value=FakeResponse(make_api_response(json.dumps(items))),
         ):
             with self.assertRaisesRegex(
@@ -348,7 +349,7 @@ Summary: Third summary.
         self.env_path.write_text("OPENAI_API_KEY=openai-key\n", encoding="utf-8")
 
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.openai.urllib.request.urlopen",
             return_value=FakeResponse(make_openai_response("[]")),
         ):
             with self.assertRaisesRegex(ResearcherError, "OpenAI API search produced no research items") as error:
@@ -383,7 +384,7 @@ Summary: Third summary.
 
     def test_gemini_api_errors_are_reported(self):
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.gemini.urllib.request.urlopen",
             side_effect=urllib.error.URLError("service unavailable"),
         ):
             with self.assertRaisesRegex(ResearcherError, "Gemini API search failed"):
@@ -397,7 +398,7 @@ Summary: Third summary.
         self.env_path.write_text("OPENAI_API_KEY=openai-key\n", encoding="utf-8")
 
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.openai.urllib.request.urlopen",
             side_effect=urllib.error.URLError("service unavailable"),
         ):
             with self.assertRaisesRegex(ResearcherError, "OpenAI API search failed"):

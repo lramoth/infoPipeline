@@ -418,7 +418,7 @@ class PlannerTests(unittest.TestCase):
         }
 
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.gemini.urllib.request.urlopen",
             return_value=FakeResponse(json.dumps(response).encode("utf-8")),
         ):
             result = Planner(
@@ -457,7 +457,7 @@ class PlannerTests(unittest.TestCase):
         }
 
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.openai.urllib.request.urlopen",
             return_value=FakeResponse(json.dumps(response).encode("utf-8")),
         ):
             result = Planner(
@@ -553,7 +553,7 @@ class PlannerTests(unittest.TestCase):
             return items
 
         with patch(
-            "researcher.urllib.request.urlopen",
+            "researcher_providers.openai.urllib.request.urlopen",
             return_value=FakeResponse(json.dumps(response).encode("utf-8")),
         ):
             result = Planner(

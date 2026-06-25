@@ -556,3 +556,10 @@
 - Scenario 13, Diagnostic Preservation Failure Does Not Obscure Original Failure: PASS — when diagnostic preservation fails, the original Researcher failure is still reported with its stage name and failure reason, the ledger records the stage as failed, and the diagnostic-preservation failure does not replace or obscure the original failure.
 - Scenario 14, Automated Tests Avoid Live External Calls: PASS — Gemini success with grounded source context, missing source context, malformed response, item normalization failure, insufficient item count, required field validation, non-Gemini provider behavior, and downstream contract preservation are all covered with controlled provider responses; all 132 repository tests pass without any live Gemini, OpenAI, Ollama, Telegram, or other external endpoint call.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-25
+
+- Spec used: `specs/researcher_provider_boundary_and_ledger_compaction_feature.md`.
+- Summary of work completed: Successful Gemini-backed Researcher output now records normalized items and a single bounded provider context area instead of duplicating equivalent grounding/source context in multiple top-level fields. Gemini and OpenAI Researcher behavior remain provider-bounded while the shared Researcher stage continues to expose the same provider selection and normalized item validation behavior to Planner and downstream stages.
+- Assumptions made: OpenAI output keeps its existing `grounding_metadata` provider metadata field because the spec only requires removing duplicate Gemini grounding/source context when the same information is already present in raw provider context. Gemini provider context remains under `raw_provider_response` with provider, model, bounded response preview, and compact search context. No new dependencies were added.
+- Gaps or suspected bugs: Real Gemini, OpenAI, Ollama, Telegram, and live website URL checks were not called during implementation; live-provider confirmation remains for a separate evaluation session.
