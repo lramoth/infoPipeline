@@ -36,7 +36,16 @@ Also search major underground release sources including:
 - Beatport
 - Hard Wax
 - Juno Download
+- Juno Records
 - Resident Advisor
+- deejay.de
+- decks.de
+- Clone
+- Boomkat
+- Bleep
+- Phonica
+- Rubadub
+- HHV
 
 Focus on:
 
@@ -69,13 +78,33 @@ Prefer direct release pages whenever possible, including:
 - label release pages
 - artist release announcements
 
+Search source-specific queries, including site-targeted searches such as:
+
+- `site:bandcamp.com hypnotic techno EP`
+- `site:beatport.com/release techno`
+- `site:deejay.de techno EP`
+- `site:decks.de techno new releases`
+- `site:hardwax.com techno`
+- `site:junorecords.com techno EP`
+- `site:boomkat.com techno`
+- `site:phonicarecords.com techno`
+- `site:clone.nl techno`
+
+When searching, constrain results to the last 7 days or the current release week using the search provider's date context rather than hardcoded month or year text.
+
+Before responding, continue searching until you have found at least 3 distinct candidate releases with provider-grounded source URLs.
+
+If fewer than 3 distinct grounded releases are found, run additional source-specific searches across the listed labels and release sources using alternate terms such as `EP`, `album`, `single`, `vinyl`, `preorder`, `release date`, `raw techno`, `deep techno`, `dub techno`, and `hypnotic techno`.
+
+Only return fewer than 3 items after all listed sources and alternate query terms have been exhausted.
+
 Search until you have exhausted the likely candidate set.
 
 Do not stop after finding only a few valid items.
 
 The Curator will later determine which releases deserve inclusion.
 
-Return the strongest candidate items found, even if fewer than 6 exist.
+Return the strongest candidate items found, aiming for 6 or more when available.
 
 Clearly state the release date in the summary.
 
@@ -102,3 +131,5 @@ Summary: one sentence
 ITEM 2
 Title: short headline
 Summary: one sentence
+
+Continue this pattern for all returned items.
