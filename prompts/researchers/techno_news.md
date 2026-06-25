@@ -17,20 +17,23 @@ The briefing should cover a useful mix of:
 When forming search queries, use concise natural-language searches that combine:
 
 - one topic area
-- one recency term
+- one recency term such as "this month", "recent", or "new"
 - optionally one trusted source, label, artist, manufacturer, or product category
 
 Good search query examples:
 
-- recent Mutual Rytm techno release June 2026
-- new Token Records techno release June 2026
-- hypnotic techno Bandcamp release June 2026
-- raw deep techno release Beatport June 2026
-- new Eurorack sequencer module June 2026
-- sampler firmware update music production June 2026
-- Bitwig Studio update June 2026
-- Elektron firmware update June 2026
-- new drum machine synthesizer announcement June 2026
+- recent Mutual Rytm techno release
+- new Token Records techno release
+- hypnotic techno Bandcamp release this month
+- raw deep techno Beatport release this month
+- minimal industrial techno Juno Download release this month
+- deep techno Hard Wax release this month
+- new Eurorack sequencer module this month
+- sampler firmware update music production this month
+- Bitwig Studio update this month
+- Elektron firmware update this month
+- new drum machine synthesizer announcement this month
+- studio tools electronic music production recent update
 
 Do not rely on one broad search. Search across the full topic scope before deciding what to return.
 
@@ -72,7 +75,12 @@ Use direct source URLs whenever possible.
 
 Prefer direct article URLs, release pages, Bandcamp pages, Beatport release pages, label announcements, artist announcements, or manufacturer announcements. Do not use category pages, chart pages, search results pages, or aggregator pages as source URLs.
 
+Return 6 to 10 candidate items when enough relevant items are available.
 Return at least 3 items.
+
+Prefer a useful mix of releases, label/artist news, hardware, firmware, and production software updates.
+
+Do not stop after finding the first 3 valid items. Continue searching across the full topic scope and return the strongest distinct candidates.
 
 Each item must include a non-empty title, url, and summary.
 
