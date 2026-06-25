@@ -5,7 +5,7 @@ profiles:
     researcher_prompt_path: prompts/researchers/release_researcher.md
     researcher_prompt_paths:
       gemini: prompts/researchers/release_researcher.md
-      openai: prompts/researchers/release_researcher.md
+      openai: prompts/researchers/release_researcher_openai.md
     curator_prompt_path: prompts/curators/release_curator.md
     writer_prompt_path: prompts/writers/outbound_brief.md
     writer_template_path: prompts/writers/template.md
@@ -13,9 +13,9 @@ profiles:
 stages:
   - name: researcher
     model:
-      provider: gemini
-      name: gemini-2.5-flash
-      endpoint: https://generativelanguage.googleapis.com/v1beta/models
+      provider: openai
+      name: gpt-4.1-mini
+      endpoint: https://api.openai.com/v1/responses
   - name: curator
     model:
       provider: openai
