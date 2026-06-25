@@ -21,9 +21,14 @@ When adding a dependency:
 Well-established third-party libraries may be added when implementing the feature correctly would otherwise require reimplementing substantial functionality.
 
 ## Workflow
-- Your only source of requirements is the spec file referenced in the prompt.
+- For code changes, new features, bug fixes, or any change that affects how
+  the application works, your only source of requirements is the spec file
+  referenced in the prompt.
+- Documentation-only changes may be made without a spec when the prompt asks
+  for documentation updates and does not require application behavior changes.
 - If a requirement is ambiguous or missing, log it under "Open questions"
-  in eval_log.md and stop — don't guess.
+  at the end of eval_log.md with a reference to the relevant spec, then stop
+  — don't guess.
 - If implementation details are unspecified, choose the simplest reasonable
   implementation that satisfies the spec. This includes module names,
   function names, class names, internal data structures, and helper methods,

@@ -45,6 +45,12 @@ Prompt and template paths are supplied through configuration rather than Python
 source defaults. This keeps Researcher, Curator, and Writer reusable across
 topics and presentations without changing source code.
 
+Researcher also supports provider-specific prompt paths through the optional
+`researcher_prompt_paths` profile field. When present, the configured
+Researcher provider selects its matching prompt path; otherwise Researcher uses
+the profile's `researcher_prompt_path`. This provider-specific prompt routing
+applies only to Researcher.
+
 Model settings use the same `model` shape for each configured stage. Gemini and
 OpenAI are supported for Researcher and Curator stages; Ollama is currently
 supported for the Writer stage.
