@@ -40,6 +40,21 @@ def make_openai_response(model_text: str) -> bytes:
     ).encode("utf-8")
 
 
+def make_grounding_metadata(count: int = 3) -> dict:
+    return {
+        "webSearchQueries": ["recent techno production news"],
+        "groundingChunks": [
+            {
+                "web": {
+                    "uri": f"https://grounded.example.com/{number}",
+                    "title": f"Source {number}",
+                }
+            }
+            for number in range(count)
+        ],
+    }
+
+
 class ResearcherTests(unittest.TestCase):
     def setUp(self):
         self.temporary_directory = tempfile.TemporaryDirectory()
@@ -55,12 +70,10 @@ class ResearcherTests(unittest.TestCase):
 
     def test_searches_gemini_and_preserves_grounding_metadata(self):
         items = [
-            {"title": f"Item {number}", "url": f"https://example.com/{number}", "summary": "News."}
+            {"title": f"Item {number}", "summary": "News."}
             for number in range(3)
         ]
-        grounding_metadata = {
-            "groundingChunks": [{"web": {"uri": "https://example.com/source"}}]
-        }
+        grounding_metadata = make_grounding_metadata()
         response = {
             "candidates": [
                 {
@@ -89,8 +102,27 @@ class ResearcherTests(unittest.TestCase):
         request_body = json.loads(request.data)
         self.assertEqual(request_body["contents"][0]["parts"][0]["text"], "custom research prompt")
         self.assertEqual(request_body["tools"], [{"google_search": {}}])
-        self.assertEqual(output["items"], items)
-        self.assertEqual(output["grounding_metadata"], grounding_metadata)
+        self.assertEqual(
+            output["items"],
+            [
+                {
+                    "title": f"Item {number}",
+                    "url": f"https://grounded.example.com/{number}",
+                    "summary": "News.",
+                }
+                for number in range(3)
+            ],
+        )
+        self.assertEqual(
+            output["grounding_metadata"]["groundingChunks"][0]["uri"],
+            "https://grounded.example.com/0",
+        )
+        self.assertEqual(output["raw_provider_response"]["provider"], "Gemini")
+        self.assertIn("groundingChunks", output["raw_provider_response"]["response_preview"])
+        self.assertEqual(
+            output["normalization"]["url_source"],
+            "provider_grounding_metadata",
+        )
 
     def test_searches_openai_with_web_search_and_returns_existing_output_contract(self):
         self.env_path.write_text("OPENAI_API_KEY=openai-key\n", encoding="utf-8")
@@ -147,14 +179,15 @@ class ResearcherTests(unittest.TestCase):
 
     def test_accepts_research_items_wrapped_in_markdown_code_fence(self):
         items = [
-            {"title": f"Item {number}", "url": f"https://example.com/{number}", "summary": "News."}
+            {"title": f"Item {number}", "summary": "News."}
             for number in range(3)
         ]
         model_text = f"```json\n{json.dumps(items)}\n```"
+        grounding_metadata = make_grounding_metadata()
 
         with patch(
             "researcher.urllib.request.urlopen",
-            return_value=FakeResponse(make_api_response(model_text)),
+            return_value=FakeResponse(make_api_response(model_text, grounding_metadata)),
         ):
             output = Researcher(
                 endpoint=self.gemini_endpoint,
@@ -162,20 +195,21 @@ class ResearcherTests(unittest.TestCase):
                 prompt_path=self.prompt_path,
             ).run()
 
-        self.assertEqual(output["items"], items)
+        self.assertEqual(output["items"][0]["url"], "https://grounded.example.com/0")
         passed, reason = Researcher.validate(output)
         self.assertTrue(passed, reason)
 
     def test_accepts_research_items_surrounded_by_explanatory_text(self):
         items = [
-            {"title": f"Item {number}", "url": f"https://example.com/{number}", "summary": "News."}
+            {"title": f"Item {number}", "summary": "News."}
             for number in range(3)
         ]
         model_text = f"Here are the results:\n{json.dumps(items)}\nHope this helps."
+        grounding_metadata = make_grounding_metadata()
 
         with patch(
             "researcher.urllib.request.urlopen",
-            return_value=FakeResponse(make_api_response(model_text)),
+            return_value=FakeResponse(make_api_response(model_text, grounding_metadata)),
         ):
             output = Researcher(
                 endpoint=self.gemini_endpoint,
@@ -183,16 +217,67 @@ class ResearcherTests(unittest.TestCase):
                 prompt_path=self.prompt_path,
             ).run()
 
-        self.assertEqual(output["items"], items)
+        self.assertEqual(output["items"][1]["url"], "https://grounded.example.com/1")
         passed, reason = Researcher.validate(output)
         self.assertTrue(passed, reason)
+
+    def test_accepts_line_based_gemini_research_items_and_normalizes_to_json(self):
+        model_text = """
+ITEM 1
+Title: First story
+Summary: First summary.
+
+ITEM 2
+Title: Second story
+Summary: Second summary.
+
+ITEM 3
+Title: Third story
+Summary: Third summary.
+"""
+
+        with patch(
+            "researcher.urllib.request.urlopen",
+            return_value=FakeResponse(make_api_response(model_text, make_grounding_metadata())),
+        ):
+            output = Researcher(
+                endpoint=self.gemini_endpoint,
+                env_path=self.env_path,
+                prompt_path=self.prompt_path,
+            ).run()
+
+        self.assertEqual(
+            output["items"],
+            [
+                {
+                    "title": "First story",
+                    "url": "https://grounded.example.com/0",
+                    "summary": "First summary.",
+                },
+                {
+                    "title": "Second story",
+                    "url": "https://grounded.example.com/1",
+                    "summary": "Second summary.",
+                },
+                {
+                    "title": "Third story",
+                    "url": "https://grounded.example.com/2",
+                    "summary": "Third summary.",
+                },
+            ],
+        )
 
     def test_rejects_research_response_without_valid_structured_data(self):
         with patch(
             "researcher.urllib.request.urlopen",
-            return_value=FakeResponse(make_api_response("Here are three useful articles.")),
+            return_value=FakeResponse(
+                make_api_response("Here are three useful articles.", make_grounding_metadata())
+            ),
         ):
-            with self.assertRaisesRegex(ResearcherError, "Invalid Gemini API search response"):
+            with self.assertRaisesRegex(
+                ResearcherError,
+                "could not create normalized research items",
+            ):
                 Researcher(
                     endpoint=self.gemini_endpoint,
                     env_path=self.env_path,
@@ -202,14 +287,42 @@ class ResearcherTests(unittest.TestCase):
     def test_rejects_malformed_research_structured_data(self):
         with patch(
             "researcher.urllib.request.urlopen",
-            return_value=FakeResponse(make_api_response('[{"title": "A"')),
+            return_value=FakeResponse(make_api_response('[{"title": "A"', make_grounding_metadata())),
         ):
-            with self.assertRaisesRegex(ResearcherError, "Invalid Gemini API search response"):
+            with self.assertRaisesRegex(
+                ResearcherError,
+                "could not create normalized research items",
+            ):
                 Researcher(
                     endpoint=self.gemini_endpoint,
                     env_path=self.env_path,
                     prompt_path=self.prompt_path,
                 ).run()
+
+    def test_rejects_gemini_response_without_source_context(self):
+        items = [
+            {"title": f"Item {number}", "summary": "News."}
+            for number in range(3)
+        ]
+
+        with patch(
+            "researcher.urllib.request.urlopen",
+            return_value=FakeResponse(make_api_response(json.dumps(items))),
+        ):
+            with self.assertRaisesRegex(
+                ResearcherError,
+                "no usable search source context",
+            ) as error:
+                Researcher(
+                    endpoint=self.gemini_endpoint,
+                    env_path=self.env_path,
+                    prompt_path=self.prompt_path,
+                ).run()
+
+        self.assertEqual(
+            error.exception.diagnostic_context["failure_category"],
+            "provider_source_context_missing",
+        )
 
     def test_validation_succeeds_for_at_least_three_complete_items(self):
         output = {

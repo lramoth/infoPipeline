@@ -82,19 +82,21 @@ Prefer a useful mix of releases, label/artist news, hardware, firmware, and prod
 
 Do not stop after finding the first 3 valid items. Continue searching across the full topic scope and return the strongest distinct candidates.
 
-Each item must include a non-empty title, url, and summary.
+Each item must include a non-empty title and summary.
 
 Prefer quality, but if fewer than 3 excellent items exist, include the strongest relevant items available so the response still contains at least 3 valid items.
 
 Do not invent facts.
 Do not create duplicate items.
 
-Respond with ONLY a JSON array in this exact format:
+Do not type source URLs into the item text. Source URLs are provided by the search grounding metadata.
 
-[
-  {
-    "title": "short headline",
-    "url": "https://...",
-    "summary": "one sentence"
-  }
-]
+Respond with ONLY item records in this exact format:
+
+ITEM 1
+Title: short headline
+Summary: one sentence
+
+ITEM 2
+Title: short headline
+Summary: one sentence

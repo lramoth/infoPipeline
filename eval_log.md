@@ -530,3 +530,10 @@
 - Scenario 9, Secrets Are Not Exposed: PASS — API keys, authentication headers, tokens, chat IDs, and environment values are absent from user-visible errors, ledger entries, and diagnostic files when a missing-text provider response failure occurs; endpoint URLs in diagnostics do not contain secrets, and provider response previews are bounded and sanitized.
 - Scenario 10, Automated Tests Avoid Live External Calls: PASS — missing-text provider response diagnostics for both Gemini and OpenAI are covered with controlled provider responses, existing raw model text parse, validation, and HTTP failure diagnostics remain covered, diagnostic safety behavior is confirmed without real credentials, and all 130 repository tests pass without requiring any live external service call.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-25
+
+- Spec used: `specs/gemini_raw_search_normalization_feature.md`.
+- Summary of work completed: Gemini-backed Researcher runs now produce normalized research items with title, URL, and summary from grounded provider search data, record bounded non-secret raw provider response context in the Researcher output for ledger inspection, fail readably when provider shape, source context, item creation, or item count prevents usable normalized output, and keep Curator, Writer, Delivery, and non-Gemini Researcher behavior on their existing contracts.
+- Assumptions made: The normalized Researcher item list remains the authoritative downstream contract; bounded raw provider response context is diagnostic context in the Researcher output. Gemini item text may arrive as JSON title/summary objects or simple line-based item records, while item URLs are taken from provider grounding metadata. No new dependencies were added.
+- Gaps or suspected bugs: Real Gemini, OpenAI, Ollama, and Telegram endpoints and live website URL checks were not called during implementation; live-provider confirmation remains for a separate evaluation session.
