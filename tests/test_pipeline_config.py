@@ -28,6 +28,8 @@ class PipelineConfigTests(unittest.TestCase):
         self.config_path.parent.mkdir()
         for relative_path in (
             "prompts/researchers/current_brief.md",
+            "prompts/researchers/gemini_brief.md",
+            "prompts/researchers/openai_brief.md",
             "prompts/curators/taste_filter.md",
             "prompts/writers/message_prompt.md",
             "prompts/writers/message_layout.md",
@@ -173,6 +175,139 @@ stages:
         self.assertEqual(stages[1].provider, "openai")
         self.assertEqual(stages[1].model, "gpt-4.1-mini")
         self.assertEqual(stages[1].endpoint, "https://openai.example/responses")
+
+    def test_provider_specific_researcher_prompt_selects_gemini_prompt(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    researcher_prompt_path: prompts/researchers/current_brief.md
+    researcher_prompt_paths:
+      gemini: prompts/researchers/gemini_brief.md
+      openai: prompts/researchers/openai_brief.md
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    model:
+      provider: gemini
+      name: gemini-2.5-flash
+      endpoint: https://gemini.example/v1beta/models
+"""
+        )
+
+        stages = load_pipeline()
+
+        self.assertEqual(
+            stages[0].prompt_path,
+            self.project_root / "prompts/researchers/gemini_brief.md",
+        )
+
+    def test_provider_specific_researcher_prompt_selects_openai_prompt(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    researcher_prompt_path: prompts/researchers/current_brief.md
+    researcher_prompt_paths:
+      gemini: prompts/researchers/gemini_brief.md
+      openai: prompts/researchers/openai_brief.md
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      endpoint: https://openai.example/responses
+"""
+        )
+
+        stages = load_pipeline()
+
+        self.assertEqual(
+            stages[0].prompt_path,
+            self.project_root / "prompts/researchers/openai_brief.md",
+        )
+
+    def test_missing_provider_specific_researcher_prompt_uses_fallback(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    researcher_prompt_path: prompts/researchers/current_brief.md
+    researcher_prompt_paths:
+      gemini: prompts/researchers/gemini_brief.md
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      endpoint: https://openai.example/responses
+"""
+        )
+
+        stages = load_pipeline()
+
+        self.assertEqual(
+            stages[0].prompt_path,
+            self.project_root / "prompts/researchers/current_brief.md",
+        )
+
+    def test_nonexistent_selected_provider_specific_researcher_prompt_is_an_error(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    researcher_prompt_path: prompts/researchers/current_brief.md
+    researcher_prompt_paths:
+      openai: prompts/researchers/missing_openai.md
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    model:
+      provider: openai
+      name: gpt-4.1-mini
+      endpoint: https://openai.example/responses
+"""
+        )
+
+        with self.assertRaisesRegex(PipelineConfigError, "prompt file does not exist"):
+            load_pipeline()
+
+    def test_unconfigured_provider_specific_researcher_prompt_is_ignored(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    researcher_prompt_path: prompts/researchers/current_brief.md
+    researcher_prompt_paths:
+      openai: prompts/researchers/missing_openai.md
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    model:
+      provider: gemini
+      name: gemini-2.5-flash
+      endpoint: https://gemini.example/v1beta/models
+"""
+        )
+
+        stages = load_pipeline()
+
+        self.assertEqual(
+            stages[0].prompt_path,
+            self.project_root / "prompts/researchers/current_brief.md",
+        )
 
     def test_unsupported_model_provider_for_stage_is_an_error(self):
         cases = [

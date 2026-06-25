@@ -40,6 +40,7 @@ PROFILE_PATH_FIELDS = {
     "curator": ("curator_prompt_path", "prompt_path"),
     "writer": ("writer_prompt_path", "prompt_path"),
 }
+RESEARCHER_PROVIDER_PROMPT_PATHS_FIELD = "researcher_prompt_paths"
 WRITER_TEMPLATE_FIELD = "writer_template_path"
 
 
@@ -156,25 +157,18 @@ def _assemble_stage(
         raise PipelineConfigError(f"Unknown stage name: {name}")
 
     profile_prompt_field, constructor_prompt_field = PROFILE_PATH_FIELDS[name]
-    prompt_path = profile.get(profile_prompt_field)
-    if not isinstance(prompt_path, str) or not prompt_path:
+    fallback_prompt_path = _required_profile_path(profile, profile_name, profile_prompt_field)
+    resolved_fallback_prompt_path = PROJECT_ROOT / fallback_prompt_path
+    if not resolved_fallback_prompt_path.is_file():
         raise PipelineConfigError(
-            f"Profile {profile_name} is missing required field: {profile_prompt_field}"
+            f"Configured prompt file does not exist for stage {name}: {resolved_fallback_prompt_path}"
         )
 
-    resolved_prompt_path = PROJECT_ROOT / prompt_path
-    if not resolved_prompt_path.is_file():
-        raise PipelineConfigError(
-            f"Configured prompt file does not exist for stage {name}: {resolved_prompt_path}"
-        )
-
-    constructor_args: dict[str, Any] = {constructor_prompt_field: resolved_prompt_path}
+    constructor_args: dict[str, Any] = {
+        constructor_prompt_field: resolved_fallback_prompt_path
+    }
     if name == "writer":
-        template_path = profile.get(WRITER_TEMPLATE_FIELD)
-        if not isinstance(template_path, str) or not template_path:
-            raise PipelineConfigError(
-                f"Profile {profile_name} is missing required field: {WRITER_TEMPLATE_FIELD}"
-            )
+        template_path = _required_profile_path(profile, profile_name, WRITER_TEMPLATE_FIELD)
         resolved_template_path = PROJECT_ROOT / template_path
         if not resolved_template_path.is_file():
             raise PipelineConfigError(
@@ -195,11 +189,54 @@ def _assemble_stage(
         raise PipelineConfigError(
             f"Unsupported model provider for stage {name}: {provider}"
         )
+
+    prompt_path = _selected_profile_prompt_path(
+        profile,
+        name,
+        fallback_prompt_path,
+        provider,
+    )
+    resolved_prompt_path = PROJECT_ROOT / prompt_path
+    if not resolved_prompt_path.is_file():
+        raise PipelineConfigError(
+            f"Configured prompt file does not exist for stage {name}: {resolved_prompt_path}"
+        )
+    constructor_args[constructor_prompt_field] = resolved_prompt_path
+
     constructor_args["provider"] = provider
     constructor_args["model"] = model["name"]
     constructor_args["endpoint"] = model["endpoint"]
 
     return STAGE_TYPES[name](**constructor_args)
+
+
+def _required_profile_path(
+    profile: dict[str, Any],
+    profile_name: str,
+    field_name: str,
+) -> str:
+    path = profile.get(field_name)
+    if not isinstance(path, str) or not path:
+        raise PipelineConfigError(
+            f"Profile {profile_name} is missing required field: {field_name}"
+        )
+    return path
+
+
+def _selected_profile_prompt_path(
+    profile: dict[str, Any],
+    stage_name: str,
+    fallback_prompt_path: str,
+    provider: str,
+) -> str:
+    if stage_name == "researcher":
+        provider_prompt_paths = profile.get(RESEARCHER_PROVIDER_PROMPT_PATHS_FIELD)
+        if isinstance(provider_prompt_paths, dict):
+            provider_prompt_path = provider_prompt_paths.get(provider)
+            if isinstance(provider_prompt_path, str) and provider_prompt_path:
+                return provider_prompt_path
+
+    return fallback_prompt_path
 
 
 def _assemble_delivery_provider(entry: Any, index: int) -> TelegramDelivery | None:

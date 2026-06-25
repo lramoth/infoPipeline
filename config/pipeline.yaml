@@ -3,6 +3,9 @@ default_profile: techno
 profiles:
   techno:
     researcher_prompt_path: prompts/researchers/techno_news.md
+    researcher_prompt_paths:
+      gemini: prompts/researchers/techno_news.md
+      openai: prompts/researchers/techno_news_openai.md
     curator_prompt_path: prompts/curators/techno_news_curator.md
     writer_prompt_path: prompts/writers/outbound_brief.md
     writer_template_path: prompts/writers/template.md

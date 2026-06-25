@@ -580,3 +580,10 @@
 - Scenario 11, Secrets And Bounds: PASS — API keys, authentication headers, tokens, chat IDs, and environment values are absent from user-visible errors, ledger entries, and diagnostics; endpoint URLs contain no secret query parameters; raw provider response records and previews are bounded rather than unbounded payload dumps.
 - Scenario 12, Automated Tests Avoid Live External Calls: PASS — Gemini compact ledger behavior, grounded URL normalization, OpenAI behavior, provider-neutral validation, downstream contract stability, Researcher failure and diagnostic behavior are all covered with controlled provider responses; all 132 repository tests pass without any live Gemini, OpenAI, Ollama, Telegram, or other external endpoint call.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-25
+
+- Spec used: `specs/provider_specific_researcher_prompts_feature.md`.
+- Summary of work completed: Profiles can now provide provider-specific Researcher prompt paths, and the configured Researcher provider selects its matching prompt when available while existing profiles continue to use the original Researcher prompt path as a fallback. The default techno profile now declares Gemini and OpenAI Researcher prompts so provider testing can be done by changing the configured Researcher provider without manually swapping prompt files.
+- Assumptions made: The existing Researcher prompt path remains required and remains the fallback path, preserving previous configuration-error behavior for profiles missing that field. Provider-specific prompt paths apply only to Researcher; Curator, Writer, template, stage order, provider selection, and delivery configuration remain unchanged. No new dependencies were added.
+- Gaps or suspected bugs: Real Gemini, OpenAI, Ollama, Telegram, and live website URL checks were not called during implementation; live-provider confirmation remains for a separate evaluation session.
