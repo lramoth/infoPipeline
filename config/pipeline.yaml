@@ -1,12 +1,12 @@
-default_profile: techno
+default_profile: techno-releases
 
 profiles:
-  techno:
-    researcher_prompt_path: prompts/researchers/techno_news.md
+  techno-releases:
+    researcher_prompt_path: prompts/researchers/release_researcher.md
     researcher_prompt_paths:
-      gemini: prompts/researchers/techno_news.md
-      openai: prompts/researchers/techno_news_openai.md
-    curator_prompt_path: prompts/curators/techno_news_curator.md
+      gemini: prompts/researchers/release_researcher.md
+      openai: prompts/researchers/release_researcher.md
+    curator_prompt_path: prompts/curators/release_curator.md
     writer_prompt_path: prompts/writers/outbound_brief.md
     writer_template_path: prompts/writers/template.md
 
