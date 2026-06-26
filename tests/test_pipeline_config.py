@@ -64,18 +64,18 @@ profiles:
     writer_template_path: prompts/writers/message_layout.md
 stages:
   - name: writer
+    provider: ollama
     model:
-      provider: ollama
       name: custom-writer
       endpoint: http://localhost:9999/generate
   - name: researcher
+    provider: gemini
     model:
-      provider: gemini
       name: gemini-2.5-flash
       endpoint: https://gemini.example/v1beta/models
   - name: curator
+    provider: gemini
     model:
-      provider: gemini
       name: gemini-2.5-flash
       endpoint: https://gemini.example/v1beta/models
 """
@@ -136,8 +136,8 @@ profiles:
     writer_prompt_path: prompts/writers/message_prompt.md
     writer_template_path: prompts/writers/message_layout.md
 stages:
-  - model:
-      provider: gemini
+  - provider: gemini
+    model:
       name: gemini-2.5-flash
 """
         )
@@ -155,13 +155,13 @@ profiles:
     writer_template_path: prompts/writers/message_layout.md
 stages:
   - name: researcher
+    provider: openai
     model:
-      provider: openai
       name: gpt-4.1-mini
       endpoint: https://openai.example/responses
   - name: curator
+    provider: openai
     model:
-      provider: openai
       name: gpt-4.1-mini
       endpoint: https://openai.example/responses
 """
@@ -190,8 +190,8 @@ profiles:
     writer_template_path: prompts/writers/message_layout.md
 stages:
   - name: researcher
+    provider: gemini
     model:
-      provider: gemini
       name: gemini-2.5-flash
       endpoint: https://gemini.example/v1beta/models
 """
@@ -218,8 +218,8 @@ profiles:
     writer_template_path: prompts/writers/message_layout.md
 stages:
   - name: researcher
+    provider: openai
     model:
-      provider: openai
       name: gpt-4.1-mini
       endpoint: https://openai.example/responses
 """
@@ -245,8 +245,8 @@ profiles:
     writer_template_path: prompts/writers/message_layout.md
 stages:
   - name: researcher
+    provider: openai
     model:
-      provider: openai
       name: gpt-4.1-mini
       endpoint: https://openai.example/responses
 """
@@ -272,8 +272,8 @@ profiles:
     writer_template_path: prompts/writers/message_layout.md
 stages:
   - name: researcher
+    provider: openai
     model:
-      provider: openai
       name: gpt-4.1-mini
       endpoint: https://openai.example/responses
 """
@@ -295,8 +295,8 @@ profiles:
     writer_template_path: prompts/writers/message_layout.md
 stages:
   - name: researcher
+    provider: gemini
     model:
-      provider: gemini
       name: gemini-2.5-flash
       endpoint: https://gemini.example/v1beta/models
 """
@@ -309,7 +309,51 @@ stages:
             self.project_root / "prompts/researchers/current_brief.md",
         )
 
-    def test_unsupported_model_provider_for_stage_is_an_error(self):
+    def test_bandcamp_researcher_loads_without_prompt_model_or_endpoint(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    provider: bandcamp
+"""
+        )
+
+        stages = load_pipeline()
+
+        self.assertEqual([type(stage) for stage in stages], [Researcher])
+        self.assertEqual(stages[0].provider, "bandcamp")
+        self.assertIsNone(stages[0].prompt_path)
+        self.assertEqual(stages[0].model, "")
+        self.assertEqual(stages[0].endpoint, "")
+
+    def test_bandcamp_researcher_ignores_unused_prompt_paths(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    researcher_prompt_path: prompts/researchers/missing.md
+    researcher_prompt_paths:
+      bandcamp: prompts/researchers/also-missing.md
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    provider: bandcamp
+"""
+        )
+
+        stages = load_pipeline()
+
+        self.assertEqual(stages[0].provider, "bandcamp")
+        self.assertIsNone(stages[0].prompt_path)
+
+    def test_unsupported_provider_for_stage_is_an_error(self):
         cases = [
             ("researcher", "ollama"),
             ("curator", "ollama"),
@@ -328,14 +372,14 @@ profiles:
     writer_template_path: prompts/writers/message_layout.md
 stages:
   - name: {stage_name}
+    provider: {provider}
     model:
-      provider: {provider}
       name: unsupported-model
       endpoint: https://model.example/endpoint
 """
                 )
 
-                with self.assertRaisesRegex(PipelineConfigError, "Unsupported model provider"):
+                with self.assertRaisesRegex(PipelineConfigError, "Unsupported provider"):
                     load_pipeline()
 
     def test_prompt_driven_stage_without_prompt_path_is_an_error(self):
@@ -348,6 +392,10 @@ profiles:
     writer_template_path: prompts/writers/message_layout.md
 stages:
   - name: researcher
+    provider: gemini
+    model:
+      name: gemini-2.5-flash
+      endpoint: https://gemini.example/v1beta/models
 """
         )
         with self.assertRaisesRegex(PipelineConfigError, "researcher_prompt_path"):
@@ -363,6 +411,10 @@ profiles:
     writer_prompt_path: prompts/writers/message_prompt.md
 stages:
   - name: writer
+    provider: ollama
+    model:
+      name: custom-writer
+      endpoint: http://localhost:9999/generate
 """
         )
         with self.assertRaisesRegex(PipelineConfigError, "writer_template_path"):
@@ -395,6 +447,10 @@ profiles:
     writer_template_path: prompts/writers/message_layout.md
 stages:
   - name: researcher
+    provider: gemini
+    model:
+      name: gemini-2.5-flash
+      endpoint: https://gemini.example/v1beta/models
 """
         )
         with self.assertRaisesRegex(PipelineConfigError, "prompt file does not exist"):
@@ -411,12 +467,16 @@ profiles:
     writer_template_path: prompts/writers/missing-layout.md
 stages:
   - name: writer
+    provider: ollama
+    model:
+      name: custom-writer
+      endpoint: http://localhost:9999/generate
 """
         )
         with self.assertRaisesRegex(PipelineConfigError, "template file does not exist"):
             load_pipeline()
 
-    def test_model_object_requires_provider_and_name(self):
+    def test_stage_requires_top_level_provider(self):
         self.write_config(
             """default_profile: sample
 profiles:
@@ -428,13 +488,33 @@ profiles:
 stages:
   - name: researcher
     model:
-      provider: gemini
+      name: gemini-2.5-flash
+      endpoint: https://gemini.example/v1beta/models
+"""
+        )
+        with self.assertRaisesRegex(PipelineConfigError, "provider"):
+            load_pipeline()
+
+    def test_model_backed_stage_requires_model_name(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    researcher_prompt_path: prompts/researchers/current_brief.md
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    provider: gemini
+    model:
+      endpoint: https://gemini.example/v1beta/models
 """
         )
         with self.assertRaisesRegex(PipelineConfigError, "name"):
             load_pipeline()
 
-    def test_model_object_requires_endpoint(self):
+    def test_model_backed_stage_requires_endpoint(self):
         self.write_config(
             """default_profile: sample
 profiles:
@@ -445,8 +525,8 @@ profiles:
     writer_template_path: prompts/writers/message_layout.md
 stages:
   - name: researcher
+    provider: gemini
     model:
-      provider: gemini
       name: gemini-2.5-flash
 """
         )
@@ -471,8 +551,8 @@ profiles:
     writer_template_path: prompts/writers/message_layout.md
 stages:
   - name: researcher
+    provider: gemini
     model:
-      provider: gemini
       name: gemini-2.5-flash
       endpoint: {endpoint}
 """
@@ -509,18 +589,18 @@ profiles:
     writer_template_path: prompts/writers/finance_layout.md
 stages:
   - name: researcher
+    provider: gemini
     model:
-      provider: gemini
       name: gemini-2.5-flash
       endpoint: https://gemini.example/v1beta/models
   - name: curator
+    provider: gemini
     model:
-      provider: gemini
       name: gemini-2.5-flash
       endpoint: https://gemini.example/v1beta/models
   - name: writer
+    provider: ollama
     model:
-      provider: ollama
       name: custom-writer
       endpoint: http://localhost:9999/generate
 """

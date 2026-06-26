@@ -25,8 +25,21 @@ DELIVERY_TYPES = {
     "telegram": TelegramDelivery,
 }
 SUPPORTED_STAGE_PROVIDERS = {
+    "researcher": {"gemini", "openai", "bandcamp"},
+    "curator": {"gemini", "openai"},
+    "writer": {"ollama"},
+}
+PROMPT_USING_PROVIDERS = {
     "researcher": {"gemini", "openai"},
     "curator": {"gemini", "openai"},
+    "writer": {"ollama"},
+}
+MODEL_USING_PROVIDERS = {
+    "researcher": {"gemini", "openai"},
+    "curator": {"gemini", "openai"},
+    "writer": {"ollama"},
+}
+TEMPLATE_USING_PROVIDERS = {
     "writer": {"ollama"},
 }
 
@@ -156,18 +169,33 @@ def _assemble_stage(
     if name not in STAGE_TYPES:
         raise PipelineConfigError(f"Unknown stage name: {name}")
 
-    profile_prompt_field, constructor_prompt_field = PROFILE_PATH_FIELDS[name]
-    fallback_prompt_path = _required_profile_path(profile, profile_name, profile_prompt_field)
-    resolved_fallback_prompt_path = PROJECT_ROOT / fallback_prompt_path
-    if not resolved_fallback_prompt_path.is_file():
+    provider = entry.get("provider")
+    if not isinstance(provider, str) or not provider:
+        raise PipelineConfigError(f"Stage {name} is missing required field: provider")
+    if provider not in SUPPORTED_STAGE_PROVIDERS[name]:
         raise PipelineConfigError(
-            f"Configured prompt file does not exist for stage {name}: {resolved_fallback_prompt_path}"
+            f"Unsupported provider for stage {name}: {provider}"
         )
 
-    constructor_args: dict[str, Any] = {
-        constructor_prompt_field: resolved_fallback_prompt_path
-    }
-    if name == "writer":
+    constructor_args: dict[str, Any] = {"provider": provider}
+
+    if provider in PROMPT_USING_PROVIDERS.get(name, set()):
+        profile_prompt_field, constructor_prompt_field = PROFILE_PATH_FIELDS[name]
+        fallback_prompt_path = _required_profile_path(profile, profile_name, profile_prompt_field)
+        prompt_path = _selected_profile_prompt_path(
+            profile,
+            name,
+            fallback_prompt_path,
+            provider,
+        )
+        resolved_prompt_path = PROJECT_ROOT / prompt_path
+        if not resolved_prompt_path.is_file():
+            raise PipelineConfigError(
+                f"Configured prompt file does not exist for stage {name}: {resolved_prompt_path}"
+            )
+        constructor_args[constructor_prompt_field] = resolved_prompt_path
+
+    if provider in TEMPLATE_USING_PROVIDERS.get(name, set()):
         template_path = _required_profile_path(profile, profile_name, WRITER_TEMPLATE_FIELD)
         resolved_template_path = PROJECT_ROOT / template_path
         if not resolved_template_path.is_file():
@@ -176,36 +204,17 @@ def _assemble_stage(
             )
         constructor_args["template_path"] = resolved_template_path
 
-    model = entry.get("model")
-    if not isinstance(model, dict):
-        raise PipelineConfigError(f"Model for stage {name} must be an object")
-    for required_field in ("provider", "name", "endpoint"):
-        if not isinstance(model.get(required_field), str) or not model[required_field]:
-            raise PipelineConfigError(
-                f"Model for stage {name} is missing required field: {required_field}"
-            )
-    provider = model["provider"]
-    if provider not in SUPPORTED_STAGE_PROVIDERS[name]:
-        raise PipelineConfigError(
-            f"Unsupported model provider for stage {name}: {provider}"
-        )
-
-    prompt_path = _selected_profile_prompt_path(
-        profile,
-        name,
-        fallback_prompt_path,
-        provider,
-    )
-    resolved_prompt_path = PROJECT_ROOT / prompt_path
-    if not resolved_prompt_path.is_file():
-        raise PipelineConfigError(
-            f"Configured prompt file does not exist for stage {name}: {resolved_prompt_path}"
-        )
-    constructor_args[constructor_prompt_field] = resolved_prompt_path
-
-    constructor_args["provider"] = provider
-    constructor_args["model"] = model["name"]
-    constructor_args["endpoint"] = model["endpoint"]
+    if provider in MODEL_USING_PROVIDERS.get(name, set()):
+        model = entry.get("model")
+        if not isinstance(model, dict):
+            raise PipelineConfigError(f"Model for stage {name} must be an object")
+        for required_field in ("name", "endpoint"):
+            if not isinstance(model.get(required_field), str) or not model[required_field]:
+                raise PipelineConfigError(
+                    f"Model for stage {name} is missing required field: {required_field}"
+                )
+        constructor_args["model"] = model["name"]
+        constructor_args["endpoint"] = model["endpoint"]
 
     return STAGE_TYPES[name](**constructor_args)
 

@@ -12,18 +12,18 @@ profiles:
 
 stages:
   - name: researcher
+    provider: openai
     model:
-      provider: openai
       name: gpt-4.1-mini
       endpoint: https://api.openai.com/v1/responses
   - name: curator
+    provider: openai
     model:
-      provider: openai
       name: gpt-4.1-mini
       endpoint: https://api.openai.com/v1/responses
   - name: writer
+    provider: ollama
     model:
-      provider: ollama
       name: gemma4:e4b
       endpoint: http://localhost:11434/api/generate
 

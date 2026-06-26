@@ -40,6 +40,28 @@ def make_openai_response(model_text: str) -> bytes:
     ).encode("utf-8")
 
 
+def make_bandcamp_result(
+    item_id: int,
+    title: str,
+    artist: str,
+    item_url: str,
+) -> dict:
+    return {
+        "item_id": item_id,
+        "item_type": "a",
+        "result_type": "a",
+        "title": title,
+        "item_url": item_url,
+        "album_artist": artist,
+        "band_name": "Mutual Rytm",
+        "band_location": "Stuttgart, Germany",
+        "release_date": "2026-06-25 00:00:00 UTC",
+        "track_count": 8,
+        "featured_track": {"title": "1000 Places"},
+        "package_info": [{"format": "vinyl"}],
+    }
+
+
 def make_grounding_metadata(count: int = 3) -> dict:
     return {
         "webSearchQueries": ["recent techno production news"],
@@ -177,6 +199,90 @@ class ResearcherTests(unittest.TestCase):
             ).run()
 
         self.assertEqual(output["items"], items)
+
+    def test_searches_bandcamp_without_prompt_and_returns_existing_output_contract(self):
+        response = {
+            "results": [
+                make_bandcamp_result(
+                    1,
+                    "Planets and Stars",
+                    "Dextro",
+                    "https://mutual-rytm.bandcamp.com/album/planets-and-stars?from=discover_page",
+                ),
+                make_bandcamp_result(
+                    2,
+                    "Nightrun",
+                    "Disguised",
+                    "https://mutual-rytm.bandcamp.com/album/nightrun?from=discover_page",
+                ),
+                make_bandcamp_result(
+                    3,
+                    "TECH041",
+                    "Nastia",
+                    "https://example.bandcamp.com/album/tech041?from=discover_page",
+                ),
+            ]
+        }
+
+        with patch(
+            "researcher_providers.bandcamp.urllib.request.urlopen",
+            return_value=FakeResponse(json.dumps(response).encode("utf-8")),
+        ) as urlopen:
+            output = Researcher(provider="bandcamp").run()
+
+        request = urlopen.call_args.args[0]
+        self.assertEqual(
+            request.full_url,
+            "https://bandcamp.com/api/discover/1/discover_web",
+        )
+        request_body = json.loads(request.data)
+        self.assertEqual(request_body["tag_norm_names"], ["hypnotic-techno", "techno"])
+        self.assertEqual(request_body["slice"], "new")
+        self.assertEqual(request_body["time_facet_id"], 0)
+        self.assertEqual(output["items"][0]["title"], "Dextro - Planets and Stars")
+        self.assertEqual(
+            output["items"][0]["url"],
+            "https://mutual-rytm.bandcamp.com/album/planets-and-stars",
+        )
+        self.assertIn("2026-06-25 Bandcamp release", output["items"][0]["summary"])
+        self.assertIn("with 8 tracks", output["items"][0]["summary"])
+        self.assertEqual(output["raw_provider_response"]["provider"], "Bandcamp")
+        passed, reason = Researcher.validate(output)
+        self.assertTrue(passed, reason)
+
+    def test_bandcamp_malformed_response_reports_readable_failure(self):
+        with patch(
+            "researcher_providers.bandcamp.urllib.request.urlopen",
+            return_value=FakeResponse(json.dumps({"items": []}).encode("utf-8")),
+        ):
+            with self.assertRaisesRegex(
+                ResearcherError,
+                "Bandcamp Discover response was malformed",
+            ):
+                Researcher(provider="bandcamp").run()
+
+    def test_bandcamp_response_with_fewer_than_three_items_fails_validation(self):
+        response = {
+            "results": [
+                make_bandcamp_result(
+                    1,
+                    "Planets and Stars",
+                    "Dextro",
+                    "https://mutual-rytm.bandcamp.com/album/planets-and-stars?from=discover_page",
+                ),
+                {"title": "Missing URL", "album_artist": "Artist"},
+            ]
+        }
+
+        with patch(
+            "researcher_providers.bandcamp.urllib.request.urlopen",
+            return_value=FakeResponse(json.dumps(response).encode("utf-8")),
+        ):
+            output = Researcher(provider="bandcamp").run()
+
+        passed, reason = Researcher.validate(output)
+        self.assertFalse(passed)
+        self.assertIn("fewer than 3", reason)
 
     def test_accepts_research_items_wrapped_in_markdown_code_fence(self):
         items = [
@@ -421,7 +527,7 @@ Summary: Third summary.
             ).run()
 
     def test_unsupported_researcher_provider_reports_readable_failure(self):
-        with self.assertRaisesRegex(ResearcherError, "Unsupported Researcher model provider"):
+        with self.assertRaisesRegex(ResearcherError, "Unsupported Researcher provider"):
             Researcher(
                 provider="other",
                 endpoint=self.gemini_endpoint,

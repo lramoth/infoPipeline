@@ -8,6 +8,7 @@ from typing import Any
 from env_config import PROJECT_ENV_PATH
 from prompt_loader import PromptLoadError, load_prompt
 from researcher_providers.errors import ResearcherError
+from researcher_providers.bandcamp import BandcampResearcherProvider
 from researcher_providers.gemini import GeminiResearcherProvider
 from researcher_providers.openai import OpenAIResearcherProvider
 
@@ -15,6 +16,7 @@ from researcher_providers.openai import OpenAIResearcherProvider
 GEMINI_MODEL = "gemini-2.5-flash"
 PROVIDER_GEMINI = "gemini"
 PROVIDER_OPENAI = "openai"
+PROVIDER_BANDCAMP = "bandcamp"
 
 
 class Researcher:
@@ -22,20 +24,28 @@ class Researcher:
 
     def __init__(
         self,
-        prompt_path: str | Path,
-        endpoint: str,
+        prompt_path: str | Path | None = None,
+        endpoint: str = "",
         provider: str = PROVIDER_GEMINI,
-        model: str = GEMINI_MODEL,
+        model: str | None = None,
         env_path: str | Path = PROJECT_ENV_PATH,
     ) -> None:
         self.provider = provider
-        self.model = model
+        self.model = model if model is not None else _default_model(provider)
         self.endpoint = endpoint.rstrip("/")
         self.env_path = Path(env_path)
-        self.prompt_path = Path(prompt_path)
+        self.prompt_path = Path(prompt_path) if prompt_path is not None else None
 
     def run(self) -> dict[str, Any]:
         """Search with the configured provider and return normalized research output."""
+        if self.provider == PROVIDER_BANDCAMP:
+            return BandcampResearcherProvider().run()
+
+        if self.prompt_path is None:
+            raise ResearcherError(
+                f"Researcher provider {self.provider} requires a prompt path"
+            )
+
         try:
             prompt = load_prompt(self.prompt_path)
         except PromptLoadError as error:
@@ -54,7 +64,7 @@ class Researcher:
                 self.env_path,
             ).run(prompt)
 
-        raise ResearcherError(f"Unsupported Researcher model provider: {self.provider}")
+        raise ResearcherError(f"Unsupported Researcher provider: {self.provider}")
 
     @staticmethod
     def validate(output: Any) -> tuple[bool, str]:
@@ -72,3 +82,9 @@ class Researcher:
                 return False, f"Research item {index} is missing a title, url, or summary"
 
         return True, "At least 3 items contain a title, url, and summary"
+
+
+def _default_model(provider: str) -> str:
+    if provider == PROVIDER_GEMINI:
+        return GEMINI_MODEL
+    return ""

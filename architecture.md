@@ -37,9 +37,9 @@ LLM call — the Planner and Delivery pieces are plain code.
 ## Configuration
 
 `config/pipeline.yaml` is the source of truth for the default pipeline. It
-defines stage order, selectable profiles, model provider/name/endpoint
-settings, and enabled delivery providers. A profile supplies Researcher,
-Curator, Writer prompt paths, and Writer's template path.
+defines stage order, selectable profiles, stage providers, provider-required
+model settings, and enabled delivery providers. A profile supplies prompt and
+template paths for providers that use prompts or templates.
 
 Prompt and template paths are supplied through configuration rather than Python
 source defaults. This keeps Researcher, Curator, and Writer reusable across
@@ -51,15 +51,18 @@ Researcher provider selects its matching prompt path; otherwise Researcher uses
 the profile's `researcher_prompt_path`. This provider-specific prompt routing
 applies only to Researcher.
 
-Model settings use the same `model` shape for each configured stage. Gemini and
-OpenAI are supported for Researcher and Curator stages; Ollama is currently
-supported for the Writer stage.
+Each stage declares a top-level `provider`. Model-backed providers require a
+`model` block with name and endpoint. Source-backed providers may omit model
+settings, prompts, and endpoints when the provider owns those details. Gemini
+and OpenAI are supported for Researcher and Curator stages; Bandcamp is
+supported for the Researcher stage; Ollama is currently supported for the
+Writer stage.
 
 Gemini-backed Researcher or Curator stage:
 
 ```yaml
+provider: gemini
 model:
-  provider: gemini
   name: gemini-2.5-flash
   endpoint: https://generativelanguage.googleapis.com/v1beta/models
 ```
@@ -67,17 +70,23 @@ model:
 OpenAI-backed Researcher or Curator stage:
 
 ```yaml
+provider: openai
 model:
-  provider: openai
   name: gpt-4.1-mini
   endpoint: https://api.openai.com/v1/responses
+```
+
+Bandcamp-backed Researcher stage:
+
+```yaml
+provider: bandcamp
 ```
 
 Ollama-backed Writer stage:
 
 ```yaml
+provider: ollama
 model:
-  provider: ollama
   name: gemma4:e4b
   endpoint: http://localhost:11434/api/generate
 ```

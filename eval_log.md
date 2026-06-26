@@ -601,3 +601,10 @@
 - Scenario 8, Provider Prompt Selection Does Not Change Provider Behavior: PASS — the configured Researcher provider, model name, and endpoint are all preserved when provider-specific prompt selection applies; only the Researcher prompt path changes according to the configured provider.
 - Scenario 9, Automated Tests Avoid Live External Calls: PASS — Gemini and OpenAI provider-specific prompt selection, fallback prompt selection, missing selected prompt failures, and Curator, Writer, stage order, model provider, and delivery configuration stability are all covered with controlled configuration and fixture files; all 32 pipeline configuration tests pass without any live Gemini, OpenAI, Ollama, Telegram, or other external call.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-26
+
+- Spec used: `specs/provider_owned_stage_configuration_feature.md`.
+- Summary of work completed: Pipeline stages now select their provider at the stage level, while model details, prompt paths, and template paths are required only when the selected provider needs them. Gemini, OpenAI, and Ollama stage capabilities remain available through the new configuration shape, and Researcher can now use a Bandcamp provider that collects Bandcamp Discover new hypnotic-techno/techno releases, normalizes them to title, URL, and summary items, and ignores unused Researcher prompt paths.
+- Assumptions made: Bandcamp's Discover today facet is treated as the source of truth for the provider's release window, and the Bandcamp provider owns its request details rather than exposing them in pipeline configuration. Bandcamp responses with fewer than three usable items are allowed to reach existing Researcher validation, which rejects them with the existing item-count rule. No new dependencies were added.
+- Gaps or suspected bugs: Real Gemini, OpenAI, Ollama, Telegram, and live Bandcamp endpoints were not called during implementation; live-provider confirmation remains for a separate evaluation session. The existing default-profile declaration test still expects `techno` while the project configuration declares `techno-releases`.
