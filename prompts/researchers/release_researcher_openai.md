@@ -5,20 +5,10 @@ Find direct Bandcamp and Beatport release pages for new underground techno relea
 Search only:
 
 - Bandcamp
-- Beatport
 
 Use search queries focused on:
 
-- `site:bandcamp.com techno EP`
-- `site:bandcamp.com hypnotic techno`
-- `site:bandcamp.com raw techno`
-- `site:bandcamp.com deep techno`
-- `site:beatport.com/release techno`
-- `site:beatport.com/release hypnotic techno`
-- `site:beatport.com/release raw techno`
-- `site:beatport.com/release deep techno`
-- `Beatport new techno releases`
-- `Bandcamp new techno releases`
+- https://bandcamp.com/discover/hypnotic-techno+techno.?t=today
 
 Return only direct release pages.
 
