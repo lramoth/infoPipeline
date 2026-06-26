@@ -1,10 +1,11 @@
 # Architecture — infoPipeline
 
 ## What this system does
-A daily automated pipeline that searches for a configured topic, curates the
-results down to what's actually worth seeing by applying the configured taste
-profile, formats the result into a clean outbound message, and delivers it via
-the configured delivery providers on schedule.
+A daily automated pipeline that collects candidate items from a configured
+Researcher provider, curates the results down to what's actually worth seeing
+by applying the configured taste profile, formats the result into a clean
+outbound message, and delivers it via the configured delivery providers on
+schedule.
 
 ## Components
 
@@ -12,16 +13,20 @@ The default pipeline is assembled from `config/pipeline.yaml`, which defines
 stage order, selectable profiles, model settings, and enabled delivery
 providers. Each profile supplies the prompt and template paths for one topic.
 
-Five conceptual pieces make up the configured pipeline. Only three involve an
-LLM call — the Planner and Delivery pieces are plain code.
+Five conceptual pieces make up the configured pipeline. Planner and Delivery
+are plain code. Curator and Writer are model-backed in the default pipeline;
+Researcher may be model-backed or source-backed depending on its configured
+provider.
 
 - **Planner** (pure Python — no LLM) — coordinates the pipeline. Reads and
   writes a JSON task ledger, validates each stage's output before
   advancing to the next, and records the run outcome. It is designed to be
   invoked on a schedule by OpenClaw or cron.
-- **Researcher** (configured search-capable model provider) — finds raw
-  candidate items via search. Gemini and OpenAI are supported providers.
-  Structured extraction, low reasoning demand.
+- **Researcher** (configured collection provider) — finds raw candidate items
+  through the configured provider. Gemini and OpenAI are supported as
+  search-capable model providers; Bandcamp is supported as a source-backed
+  discovery provider. Researcher exposes normalized candidate items to later
+  stages regardless of provider.
 - **Curator** (configured model provider) — uses a configured prompt to rank
   and filter the researcher's raw items. Gemini and OpenAI are supported
   providers. Validation checks that the curated output has required fields and
@@ -100,7 +105,8 @@ overwrite each other's same-day run records.
 
 Writer uses a markdown template to assemble the final outbound message. The
 template has a message-level section containing `{items}` and an item-level
-section introduced by `# Item Template`. The item-level section must include
+section introduced by `# Item Template`. The message-level section may
+optionally start with `# Message Template`. The item-level section must include
 `{title}`, `{note}`, and `{url}`.
 
 ```markdown
@@ -120,7 +126,8 @@ Source:
 
 Curator output remains authoritative for item titles, source URLs, and rank
 order. The configured Writer model supplies only per-item prose used as
-`{note}`; Python assembles the final message from the configured template.
+`{note}`. The Writer expects one note per curated item, and Python assembles the
+final message from the configured template.
 
 ## Data flow
 
@@ -150,7 +157,9 @@ pipeline at that stage rather than passing bad output forward.
 
 Delivery runs only after all configured stages have completed successfully.
 Delivery is recorded separately from stage results and does not generate,
-edit, rank, filter, or summarize the Writer's outbound message.
+edit, rank, filter, or summarize the Writer's outbound message. Delivery
+failure is reported separately from stage failure and does not change the
+recorded Writer output or turn a successful Writer stage into a failed stage.
 
 ## External dependencies
 
@@ -158,6 +167,8 @@ edit, rank, filter, or summarize the Writer's outbound message.
   ranking/filtering.
 - **OpenAI API** — supported provider for Researcher search results and Curator
   ranking/filtering.
+- **Bandcamp Discover API** — supported source-backed provider for Researcher
+  candidate collection.
 - **Ollama (local)** — supported provider for Writer item prose generation.
 - **Telegram Bot API** — currently implemented delivery provider.
 - **Local `.env` file** — contains provider and delivery settings such as
@@ -166,11 +177,11 @@ edit, rank, filter, or summarize the Writer's outbound message.
 
 ## Ledger
 
-Each profile ledger records the current day's selected profile, stage status,
-stage output, validation reason, delivery outcomes, timestamps, and any
-diagnostic file path. When a stage fails or produces invalid output,
-best-effort diagnostic JSON files are written under that profile's diagnostics
-directory.
+Each invocation writes a fresh profile ledger for that day. The ledger records
+the selected profile, stage status, stage output, validation reason, delivery
+outcomes, timestamps, and any diagnostic file path. When a stage fails or
+produces invalid output, best-effort diagnostic JSON files are written under
+that profile's diagnostics directory.
 
 ```json
 {
@@ -182,7 +193,7 @@ directory.
       "output": "<whatever the stage returned>",
       "validation_reason": "<why it passed or failed>",
       "timestamp": "<ISO 8601>",
-      "diagnostic_path": "<Failure responses returned by external services>"
+      "diagnostic_path": "<optional path to a diagnostic record>"
     }
   },
   "delivery": {
