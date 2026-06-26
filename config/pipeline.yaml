@@ -12,10 +12,7 @@ profiles:
 
 stages:
   - name: researcher
-    provider: openai
-    model:
-      name: gpt-4.1-mini
-      endpoint: https://api.openai.com/v1/responses
+    provider: bandcamp
   - name: curator
     provider: openai
     model:
