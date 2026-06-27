@@ -10,7 +10,7 @@
 - Writer stage uses configured provider logic, currently supporting only local
   Ollama (model: gemma4:e4b).
 - Delivery stage posts to Telegram.
-- Runs under the OpenClaw agent runtime.
+- Designed for command-line invocation.
 
 ## Dependencies
 External dependencies may be added when they provide significant value and avoid reimplementing established functionality.

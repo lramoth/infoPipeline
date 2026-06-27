@@ -24,7 +24,7 @@ provider.
 - **Planner** (pure Python — no LLM) — coordinates the pipeline. Reads and
   writes a JSON task ledger, validates each stage's output before
   advancing to the next, and records the run outcome. It is designed to be
-  invoked on a schedule by OpenClaw or cron.
+  started manually or by an external scheduling mechanism.
 - **Researcher** (configured collection provider) — finds raw candidate items
   through the configured provider. Gemini and OpenAI are supported as
   search-capable model providers; Bandcamp is supported as a source-backed
@@ -115,7 +115,7 @@ delivery provider when applicable, and include artifact paths when available.
 
 The process exit code agrees with the reported JSON status. Incidental output
 from underlying stages may appear on standard error, but standard output is the
-machine-readable result surface for OpenClaw or cron.
+machine-readable result surface for callers and monitoring tools.
 
 ## Writer Template Contract
 
@@ -231,7 +231,12 @@ stage diagnostic files.
 
 ## Runtime
 
-- OpenClaw is the host/runtime, not a participant in the pipeline's logic.
-  All decision-making lives in plain Python (`planner.py`) and direct API
-  calls. OpenClaw or cron can invoke `planner.py` on a schedule; the Python
-  application itself runs one pipeline pass per invocation.
+`planner.py` is the command-line entry point and runs one pipeline pass per
+invocation. It may be started manually or by any external scheduling mechanism,
+provided the configured environment, working directory, and provider credentials
+are available at run time.
+
+All decision-making lives in plain Python (`planner.py`) and direct provider
+API calls. External scheduling is responsible only for starting runs and
+observing their process status, standard output, standard error, and any
+configured artifacts.
