@@ -1,17 +1,20 @@
 # Architecture — infoPipeline
 
 ## What this system does
-A daily automated pipeline that collects candidate items from a configured
-Researcher provider, curates the results down to what's actually worth seeing
-by applying the configured taste profile, formats the result into a clean
-outbound message, and delivers it via the configured delivery providers on
-schedule.
+A single-run pipeline, designed for scheduled invocation, that collects
+candidate items from a configured Researcher provider, curates the results down
+to what's actually worth seeing by applying the configured taste profile,
+formats the result into a clean outbound message, and delivers it via the
+configured delivery providers.
 
 ## Components
 
 The default pipeline is assembled from `config/pipeline.yaml`, which defines
 stage order, selectable profiles, model settings, and enabled delivery
 providers. Each profile supplies the prompt and template paths for one topic.
+The current default profile is `techno-releases`; its default stage path uses
+Bandcamp for Researcher collection, OpenAI for Curator ranking/filtering,
+Ollama for Writer prose generation, and Telegram delivery when enabled.
 
 Five conceptual pieces make up the configured pipeline. Planner and Delivery
 are plain code. Curator and Writer are model-backed in the default pipeline;
@@ -101,6 +104,19 @@ no profile is selected, the configured `default_profile` is used. Profile runs
 write to profile-specific ledger locations so separate scheduled jobs do not
 overwrite each other's same-day run records.
 
+## Command-line result
+
+Each command-line invocation runs one pipeline pass and prints one parseable
+JSON result object to standard output. Successful results report success,
+include a readable summary, identify the selected profile when known, include
+the final pipeline output, and point to the ledger path. Failed results report
+failure, include a readable summary and reason, identify the failed stage or
+delivery provider when applicable, and include artifact paths when available.
+
+The process exit code agrees with the reported JSON status. Incidental output
+from underlying stages may appear on standard error, but standard output is the
+machine-readable result surface for OpenClaw or cron.
+
 ## Writer Template Contract
 
 Writer uses a markdown template to assemble the final outbound message. The
@@ -177,11 +193,17 @@ recorded Writer output or turn a successful Writer stage into a failed stage.
 
 ## Ledger
 
-Each invocation writes a fresh profile ledger for that day. The ledger records
-the selected profile, stage status, stage output, validation reason, delivery
-outcomes, timestamps, and any diagnostic file path. When a stage fails or
-produces invalid output, best-effort diagnostic JSON files are written under
-that profile's diagnostics directory.
+Each configured invocation writes the current ledger for the selected profile.
+Different profiles use separate ledger locations so separate scheduled jobs do
+not overwrite each other's records. Re-running the same profile updates that
+profile's ledger location with the current run.
+
+The ledger records the selected profile, stage status, stage output, validation
+reason, delivery outcomes, timestamps, and any stage diagnostic file path. When
+a stage raises an error or produces invalid output, best-effort diagnostic JSON
+files are written under that profile's diagnostics directory. Delivery failures
+are recorded as delivery outcomes in the ledger; they do not currently create
+stage diagnostic files.
 
 ```json
 {

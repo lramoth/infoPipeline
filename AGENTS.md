@@ -53,6 +53,11 @@ Well-established third-party libraries may be added when implementing the featur
 - New entries must be written at the end of the file.
 - Existing entries must never be reordered, modified, or inserted above.
 - Drafting or editing spec/eval artifacts does not require an eval_log.md entry unless explicitly requested.
+- Architecture-review-only work does not require an eval_log.md entry, even
+  when `architecture.md` is updated to correct or clarify the architectural
+  description. If `architecture.md` is revised as part of implementing a spec
+  during a build session, include that documentation work in the build-log
+  entry for the spec.
 
 Build sessions append entries under:
 
