@@ -647,3 +647,10 @@
 - Scenario 7, Secret And Raw Payload Safety: PASS — the JSON result contains no configured API keys, access tokens, or Telegram credentials; delivery and stage failure reasons use concise readable messages rather than unbounded raw provider responses; diagnostic and ledger artifact paths appear as file path references rather than inline payloads.
 - Scenario 8, Existing Pipeline Behavior Is Unchanged: PASS — stage validation, profile command-line selection, and Telegram delivery behavior remain unchanged; no new command-line flag or argument is needed to receive the JSON result; all automated tests for pipeline stage, delivery, and profile behavior pass without live external endpoint calls; the three pre-existing failures about the configured default profile name are unrelated to this feature.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-27
+
+- Spec used: `specs/default_profile_agnostic_tests_feature.md`.
+- Summary of work completed: Active profile selection tests now verify explicit profile selection, default-profile resolution, missing-default failure, and checked-in configuration consistency without requiring any particular checked-in default profile name or requiring the checked-in configuration to declare a default profile.
+- Assumptions made: The checked-in configuration may still declare a default profile, and when it does, active tests may verify that the declaration points to an existing configured profile. No runtime pipeline behavior was changed. No new dependencies were added.
+- Gaps or suspected bugs: Real Gemini, OpenAI, Ollama, Telegram, Bandcamp, and OpenClaw calls were not run during implementation; live runtime confirmation remains for separate evaluation work.

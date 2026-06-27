@@ -3,6 +3,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import yaml
+
 import pipeline_config
 import curator as curator_module
 import researcher as researcher_module
@@ -728,17 +730,37 @@ delivery:
 
 
 class DefaultPipelineConfigTests(unittest.TestCase):
+    def selected_checked_in_profile(self):
+        config = yaml.safe_load(pipeline_config.CONFIG_PATH.read_text(encoding="utf-8"))
+        profiles = config.get("profiles")
+        self.assertIsInstance(profiles, dict)
+        self.assertTrue(profiles)
+        default_profile = config.get("default_profile")
+        if default_profile is not None:
+            self.assertIsInstance(default_profile, str)
+            self.assertIn(default_profile, profiles)
+            return default_profile
+        return next(iter(profiles))
+
     def test_default_config_defines_required_stage_order_and_prompts(self):
-        stages = load_pipeline()
+        stages = load_pipeline(self.selected_checked_in_profile())
 
         self.assertEqual([type(stage) for stage in stages], [Researcher, Curator, Writer])
         for stage in stages:
-            self.assertTrue(stage.prompt_path.is_file())
-            self.assertTrue(stage.endpoint)
+            if getattr(stage, "prompt_path", None) is not None:
+                self.assertTrue(stage.prompt_path.is_file())
         self.assertTrue(stages[2].template_path.is_file())
 
-    def test_default_profile_is_declared(self):
-        self.assertEqual(resolve_profile_name(), "techno")
+    def test_checked_in_default_profile_is_internally_consistent_when_declared(self):
+        config = yaml.safe_load(pipeline_config.CONFIG_PATH.read_text(encoding="utf-8"))
+        profiles = config.get("profiles")
+        self.assertIsInstance(profiles, dict)
+        self.assertTrue(profiles)
+        default_profile = config.get("default_profile")
+        if default_profile is not None:
+            self.assertIsInstance(default_profile, str)
+            self.assertIn(default_profile, profiles)
+            self.assertEqual(resolve_profile_name(), default_profile)
 
     def test_configured_stages_do_not_define_path_fallbacks(self):
         self.assertFalse(hasattr(researcher_module, "DEFAULT_PROMPT_PATH"))

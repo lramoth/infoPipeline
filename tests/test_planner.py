@@ -234,11 +234,12 @@ class PlannerTests(unittest.TestCase):
             Stage("writer", lambda output: "final output", lambda output: (True, "writer passed")),
         ]
 
-        with patch("planner.load_pipeline", return_value=configured_stages) as load_pipeline, \
+        with patch("planner.resolve_profile_name", return_value="fixture-default"), \
+            patch("planner.load_pipeline", return_value=configured_stages) as load_pipeline, \
             patch("planner.load_delivery_config", return_value=[]) as load_delivery_config:
             result = Planner(ledger_path=self.ledger_path).run()
 
-        load_pipeline.assert_called_once_with("techno")
+        load_pipeline.assert_called_once_with("fixture-default")
         load_delivery_config.assert_called_once_with()
         self.assertTrue(result.succeeded)
         self.assertEqual(result.output, "final output")
@@ -655,7 +656,7 @@ class PlannerTests(unittest.TestCase):
         stderr = StringIO()
         with patch("planner.Planner") as planner_class, \
             redirect_stdout(stdout), redirect_stderr(stderr):
-            planner_class.return_value.profile_name = "techno"
+            planner_class.return_value.profile_name = "fixture-profile"
             planner_class.return_value.ledger_path = self.ledger_path
             planner_class.return_value.run.return_value = RunResult(True, "final message")
             exit_code = main([])
@@ -664,7 +665,7 @@ class PlannerTests(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["status"], "SUCCESS")
         self.assertEqual(payload["summary"], "Pipeline completed successfully.")
-        self.assertEqual(payload["profile"], "techno")
+        self.assertEqual(payload["profile"], "fixture-profile")
         self.assertEqual(payload["output"], "final message")
         self.assertEqual(payload["ledger_path"], str(self.ledger_path))
         self.assertEqual(stderr.getvalue(), "")
@@ -689,7 +690,7 @@ class PlannerTests(unittest.TestCase):
         stderr = StringIO()
         with patch("planner.Planner") as planner_class, \
             redirect_stdout(stdout), redirect_stderr(stderr):
-            planner_class.return_value.profile_name = "techno"
+            planner_class.return_value.profile_name = "fixture-profile"
             planner_class.return_value.ledger_path = self.ledger_path
             planner_class.return_value.run.return_value = RunResult(
                 False,
@@ -702,7 +703,7 @@ class PlannerTests(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["status"], "FAILURE")
         self.assertEqual(payload["summary"], "Pipeline failed during writer.")
-        self.assertEqual(payload["profile"], "techno")
+        self.assertEqual(payload["profile"], "fixture-profile")
         self.assertEqual(payload["failed_stage"], "writer")
         self.assertEqual(payload["reason"], "bad format")
         self.assertEqual(payload["diagnostic_path"], str(diagnostic_path))
@@ -714,7 +715,7 @@ class PlannerTests(unittest.TestCase):
         stderr = StringIO()
         with patch("planner.Planner") as planner_class, \
             redirect_stdout(stdout), redirect_stderr(stderr):
-            planner_class.return_value.profile_name = "techno"
+            planner_class.return_value.profile_name = "fixture-profile"
             planner_class.return_value.ledger_path = self.ledger_path
             planner_class.return_value.run.return_value = RunResult(
                 False,
@@ -728,7 +729,7 @@ class PlannerTests(unittest.TestCase):
         payload = json.loads(stdout.getvalue())
         self.assertEqual(payload["status"], "FAILURE")
         self.assertEqual(payload["summary"], "Pipeline delivery failed for telegram.")
-        self.assertEqual(payload["profile"], "techno")
+        self.assertEqual(payload["profile"], "fixture-profile")
         self.assertEqual(payload["failed_delivery"], "telegram")
         self.assertEqual(payload["output"], "final message")
         self.assertEqual(payload["reason"], "network down")
@@ -778,7 +779,7 @@ class PlannerTests(unittest.TestCase):
 
         with patch("planner.Planner") as planner_class, \
             redirect_stdout(stdout), redirect_stderr(stderr):
-            planner_class.return_value.profile_name = "techno"
+            planner_class.return_value.profile_name = "fixture-profile"
             planner_class.return_value.ledger_path = self.ledger_path
             planner_class.return_value.run.side_effect = run_with_terminal_noise
             exit_code = main([])
