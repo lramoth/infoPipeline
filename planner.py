@@ -6,6 +6,7 @@ import json
 import inspect
 import sys
 import argparse
+from contextlib import redirect_stdout
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -296,13 +297,95 @@ class Planner:
         return len(positional_parameters) >= count
 
 
-def _format_cli_output(output: Any) -> str:
-    if isinstance(output, str):
-        return output
+def _read_ledger(ledger_path: Path) -> dict[str, Any]:
     try:
-        return json.dumps(output, indent=2)
+        with ledger_path.open(encoding="utf-8") as ledger_file:
+            ledger = json.load(ledger_file)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return ledger if isinstance(ledger, dict) else {}
+
+
+def _stage_diagnostic_path(ledger_path: Path, failed_stage: str | None) -> str | None:
+    if failed_stage is None:
+        return None
+    ledger = _read_ledger(ledger_path)
+    stages = ledger.get("stages")
+    if not isinstance(stages, dict):
+        return None
+    stage_entry = stages.get(failed_stage)
+    if not isinstance(stage_entry, dict):
+        return None
+    diagnostic_path = stage_entry.get("diagnostic_path")
+    return diagnostic_path if isinstance(diagnostic_path, str) else None
+
+
+def _json_safe(value: Any) -> Any:
+    try:
+        json.dumps(value)
     except TypeError:
-        return str(output)
+        return str(value)
+    return value
+
+
+def _successful_cli_result(result: RunResult, planner: Planner) -> dict[str, Any]:
+    payload: dict[str, Any] = {
+        "status": "SUCCESS",
+        "summary": "Pipeline completed successfully.",
+        "output": _json_safe(result.output),
+        "ledger_path": str(planner.ledger_path),
+    }
+    if planner.profile_name is not None:
+        payload["profile"] = planner.profile_name
+    return payload
+
+
+def _failed_cli_result(result: RunResult, planner: Planner) -> dict[str, Any]:
+    reason = result.reason or "No failure reason provided."
+    payload: dict[str, Any] = {
+        "status": "FAILURE",
+        "summary": _failure_summary(result),
+        "reason": reason,
+        "ledger_path": str(planner.ledger_path),
+    }
+    if planner.profile_name is not None:
+        payload["profile"] = planner.profile_name
+    if result.failed_stage is not None:
+        payload["failed_stage"] = result.failed_stage
+    if result.failed_delivery is not None:
+        payload["failed_delivery"] = result.failed_delivery
+    if result.output is not None:
+        payload["output"] = _json_safe(result.output)
+    diagnostic_path = _stage_diagnostic_path(planner.ledger_path, result.failed_stage)
+    if diagnostic_path is not None:
+        payload["diagnostic_path"] = diagnostic_path
+    return payload
+
+
+def _startup_failure_cli_result(
+    error: Exception,
+    profile_name: str | None,
+) -> dict[str, Any]:
+    payload = {
+        "status": "FAILURE",
+        "summary": "Pipeline could not start.",
+        "reason": f"{type(error).__name__}: {error}",
+    }
+    if profile_name is not None:
+        payload["profile"] = profile_name
+    return payload
+
+
+def _failure_summary(result: RunResult) -> str:
+    if result.failed_delivery is not None:
+        return f"Pipeline delivery failed for {result.failed_delivery}."
+    if result.failed_stage is not None:
+        return f"Pipeline failed during {result.failed_stage}."
+    return "Pipeline failed."
+
+
+def _print_cli_result(payload: dict[str, Any]) -> None:
+    print(json.dumps(payload, indent=2))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -316,26 +399,18 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        result = Planner(profile_name=args.profile_name).run()
+        planner = Planner(profile_name=args.profile_name)
+        with redirect_stdout(sys.stderr):
+            result = planner.run()
     except Exception as error:
-        print(f"Pipeline failed: {type(error).__name__}: {error}", file=sys.stderr)
+        _print_cli_result(_startup_failure_cli_result(error, args.profile_name))
         return 1
 
     if result.succeeded:
-        print(_format_cli_output(result.output))
+        _print_cli_result(_successful_cli_result(result, planner))
         return 0
 
-    if result.failed_delivery:
-        print(_format_cli_output(result.output))
-        print(
-            f"Delivery failed for {result.failed_delivery}: {result.reason}",
-            file=sys.stderr,
-        )
-        return 1
-
-    failed_stage = result.failed_stage or "unknown stage"
-    reason = result.reason or "no failure reason provided"
-    print(f"Pipeline failed at {failed_stage}: {reason}", file=sys.stderr)
+    _print_cli_result(_failed_cli_result(result, planner))
     return 1
 
 

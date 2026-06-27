@@ -653,49 +653,87 @@ class PlannerTests(unittest.TestCase):
     def test_cli_prints_final_output_and_exits_zero_on_success(self):
         stdout = StringIO()
         stderr = StringIO()
-        with patch.object(
-            Planner,
-            "run",
-            return_value=RunResult(True, "final message"),
-        ), redirect_stdout(stdout), redirect_stderr(stderr):
+        with patch("planner.Planner") as planner_class, \
+            redirect_stdout(stdout), redirect_stderr(stderr):
+            planner_class.return_value.profile_name = "techno"
+            planner_class.return_value.ledger_path = self.ledger_path
+            planner_class.return_value.run.return_value = RunResult(True, "final message")
             exit_code = main([])
 
         self.assertEqual(exit_code, 0)
-        self.assertEqual(stdout.getvalue(), "final message\n")
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "SUCCESS")
+        self.assertEqual(payload["summary"], "Pipeline completed successfully.")
+        self.assertEqual(payload["profile"], "techno")
+        self.assertEqual(payload["output"], "final message")
+        self.assertEqual(payload["ledger_path"], str(self.ledger_path))
         self.assertEqual(stderr.getvalue(), "")
 
     def test_cli_prints_readable_error_and_exits_nonzero_on_run_failure(self):
+        diagnostic_path = self.ledger_path.parent / "diagnostics" / "writer.json"
+        self.ledger_path.parent.mkdir(parents=True)
+        self.ledger_path.write_text(
+            json.dumps(
+                {
+                    "stages": {
+                        "writer": {
+                            "status": "failed",
+                            "diagnostic_path": str(diagnostic_path),
+                        }
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
         stdout = StringIO()
         stderr = StringIO()
-        with patch.object(
-            Planner,
-            "run",
-            return_value=RunResult(False, failed_stage="writer", reason="bad format"),
-        ), redirect_stdout(stdout), redirect_stderr(stderr):
+        with patch("planner.Planner") as planner_class, \
+            redirect_stdout(stdout), redirect_stderr(stderr):
+            planner_class.return_value.profile_name = "techno"
+            planner_class.return_value.ledger_path = self.ledger_path
+            planner_class.return_value.run.return_value = RunResult(
+                False,
+                failed_stage="writer",
+                reason="bad format",
+            )
             exit_code = main([])
 
         self.assertEqual(exit_code, 1)
-        self.assertEqual(stdout.getvalue(), "")
-        self.assertIn("Pipeline failed at writer: bad format", stderr.getvalue())
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "FAILURE")
+        self.assertEqual(payload["summary"], "Pipeline failed during writer.")
+        self.assertEqual(payload["profile"], "techno")
+        self.assertEqual(payload["failed_stage"], "writer")
+        self.assertEqual(payload["reason"], "bad format")
+        self.assertEqual(payload["diagnostic_path"], str(diagnostic_path))
+        self.assertEqual(payload["ledger_path"], str(self.ledger_path))
+        self.assertEqual(stderr.getvalue(), "")
 
     def test_cli_reports_delivery_failure_separately_from_stage_failure(self):
         stdout = StringIO()
         stderr = StringIO()
-        with patch.object(
-            Planner,
-            "run",
-            return_value=RunResult(
+        with patch("planner.Planner") as planner_class, \
+            redirect_stdout(stdout), redirect_stderr(stderr):
+            planner_class.return_value.profile_name = "techno"
+            planner_class.return_value.ledger_path = self.ledger_path
+            planner_class.return_value.run.return_value = RunResult(
                 False,
                 "final message",
                 failed_delivery="telegram",
                 reason="network down",
-            ),
-        ), redirect_stdout(stdout), redirect_stderr(stderr):
+            )
             exit_code = main([])
 
         self.assertEqual(exit_code, 1)
-        self.assertEqual(stdout.getvalue(), "final message\n")
-        self.assertIn("Delivery failed for telegram: network down", stderr.getvalue())
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "FAILURE")
+        self.assertEqual(payload["summary"], "Pipeline delivery failed for telegram.")
+        self.assertEqual(payload["profile"], "techno")
+        self.assertEqual(payload["failed_delivery"], "telegram")
+        self.assertEqual(payload["output"], "final message")
+        self.assertEqual(payload["reason"], "network down")
+        self.assertEqual(payload["ledger_path"], str(self.ledger_path))
+        self.assertEqual(stderr.getvalue(), "")
 
     def test_cli_prints_readable_error_and_exits_nonzero_on_startup_error(self):
         stdout = StringIO()
@@ -705,21 +743,51 @@ class PlannerTests(unittest.TestCase):
             exit_code = main([])
 
         self.assertEqual(exit_code, 1)
-        self.assertEqual(stdout.getvalue(), "")
-        self.assertIn("Pipeline failed: RuntimeError: missing config", stderr.getvalue())
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "FAILURE")
+        self.assertEqual(payload["summary"], "Pipeline could not start.")
+        self.assertEqual(payload["reason"], "RuntimeError: missing config")
+        self.assertNotIn("profile", payload)
+        self.assertEqual(stderr.getvalue(), "")
 
     def test_cli_passes_profile_to_planner(self):
         stdout = StringIO()
         stderr = StringIO()
         with patch("planner.Planner") as planner_class, \
             redirect_stdout(stdout), redirect_stderr(stderr):
+            planner_class.return_value.profile_name = "finance"
+            planner_class.return_value.ledger_path = self.ledger_path
             planner_class.return_value.run.return_value = RunResult(True, "profile message")
             exit_code = main(["--profile", "finance"])
 
         planner_class.assert_called_once_with(profile_name="finance")
         self.assertEqual(exit_code, 0)
-        self.assertEqual(stdout.getvalue(), "profile message\n")
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "SUCCESS")
+        self.assertEqual(payload["profile"], "finance")
+        self.assertEqual(payload["output"], "profile message")
         self.assertEqual(stderr.getvalue(), "")
+
+    def test_cli_keeps_stage_stdout_out_of_final_result_stdout(self):
+        stdout = StringIO()
+        stderr = StringIO()
+
+        def run_with_terminal_noise():
+            print("stage progress")
+            return RunResult(True, "final message")
+
+        with patch("planner.Planner") as planner_class, \
+            redirect_stdout(stdout), redirect_stderr(stderr):
+            planner_class.return_value.profile_name = "techno"
+            planner_class.return_value.ledger_path = self.ledger_path
+            planner_class.return_value.run.side_effect = run_with_terminal_noise
+            exit_code = main([])
+
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "SUCCESS")
+        self.assertEqual(payload["output"], "final message")
+        self.assertIn("stage progress", stderr.getvalue())
 
 
 if __name__ == "__main__":

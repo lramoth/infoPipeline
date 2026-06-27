@@ -627,3 +627,10 @@
 - Scenario 13, No Extra Bandcamp Configuration Is Exposed: PASS — Bandcamp Researcher loads with only a provider declaration; no user-configurable tags, slice, time facet, cursor, result types, size, or endpoint are required in pipeline configuration.
 - Scenario 14, Automated Tests Avoid Live External Calls: PASS — stage-level provider selection, provider-specific model requirements, prompt and template requirements, Bandcamp successful responses, and Bandcamp failure conditions are all covered with controlled configuration and controlled provider responses without any live external call; two pre-existing test failures about the configured default profile name are unrelated to provider-owned stage configuration behavior.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-27
+
+- Spec used: `specs/openclaw_cron_result_output_feature.md`.
+- Summary of work completed: Command-line pipeline runs now print one parseable JSON result object to standard output with an explicit `SUCCESS` or `FAILURE` status, readable summary, selected profile when known, final output on success, stage or delivery failure details when applicable, and ledger or diagnostic paths when available. The process exit code now agrees with the reported JSON status, and incidental run output is kept out of the final standard-output result so OpenClaw can parse the outcome from standard output alone.
+- Assumptions made: Standard error may still receive incidental progress output from underlying stages, but OpenClaw does not need standard error to determine the run result or user-facing reason. Startup failures may omit profile and artifact paths when the command cannot resolve them before the run starts. No new dependencies were added.
+- Gaps or suspected bugs: Real Gemini, OpenAI, Ollama, Telegram, and live OpenClaw cron execution were not called during implementation; live-provider and runtime confirmation remain for a separate evaluation session. The focused OpenClaw CLI result tests pass, but the full repository suite still has pre-existing default-profile/configuration failures unrelated to this feature.
