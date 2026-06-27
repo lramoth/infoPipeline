@@ -11,6 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import writer as writer_module
+from planner import Planner, Stage
 from writer import Writer, WriterError
 
 
@@ -28,6 +29,18 @@ def make_ollama_response(message: str) -> bytes:
 
 def make_notes_response(notes: list[str]) -> bytes:
     return make_ollama_response(json.dumps(notes))
+
+
+def make_wrapped_notes_response(notes: list[str]) -> bytes:
+    return make_ollama_response(f"```json\n{json.dumps(notes)}\n```")
+
+
+def make_explained_notes_response(notes: list[str]) -> bytes:
+    return make_ollama_response(
+        "Here are the generated notes:\n"
+        f"{json.dumps(notes)}\n"
+        "These match the requested item order."
+    )
 
 
 def make_curator_item(rank: int, url: str | None = None) -> dict:
@@ -260,6 +273,34 @@ class WriterTests(unittest.TestCase):
         self.assertIn("Why it matters: custom note", result)
         self.assertIn("Link => https://example.com/1", result)
 
+    def test_accepts_model_notes_wrapped_in_markdown_code_fence(self):
+        items = [make_curator_item(1)]
+        notes = ["Generated note from fenced JSON."]
+
+        with patch(
+            "writer.urllib.request.urlopen",
+            return_value=FakeResponse(make_wrapped_notes_response(notes)),
+        ):
+            result = Writer(prompt_path=self.prompt_path, template_path=self.template_path).run(items)
+
+        self.assertIn(notes[0], result)
+        self.assertIn(items[0]["title"], result)
+        self.assertIn(items[0]["url"], result)
+
+    def test_accepts_model_notes_surrounded_by_explanatory_text(self):
+        items = [make_curator_item(1)]
+        notes = ["Generated note from surrounded JSON."]
+
+        with patch(
+            "writer.urllib.request.urlopen",
+            return_value=FakeResponse(make_explained_notes_response(notes)),
+        ):
+            result = Writer(prompt_path=self.prompt_path, template_path=self.template_path).run(items)
+
+        self.assertIn(notes[0], result)
+        self.assertIn(items[0]["title"], result)
+        self.assertIn(items[0]["url"], result)
+
     def test_unusable_model_prose_raises_writer_error(self):
         with patch(
             "writer.urllib.request.urlopen",
@@ -267,6 +308,80 @@ class WriterTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(WriterError, "usable item prose"):
                 Writer(prompt_path=self.prompt_path, template_path=self.template_path).run([make_curator_item(1)])
+
+    def test_unusable_model_prose_includes_diagnostic_context(self):
+        model_response = "not json"
+
+        with patch(
+            "writer.urllib.request.urlopen",
+            return_value=FakeResponse(make_ollama_response(model_response)),
+        ):
+            with self.assertRaisesRegex(WriterError, "usable item prose") as captured:
+                Writer(prompt_path=self.prompt_path, template_path=self.template_path).run([make_curator_item(1)])
+
+        context = captured.exception.diagnostic_context
+        self.assertEqual("model_output_parse", context["failure_category"])
+        self.assertEqual(model_response, context["raw_model_text_preview"])
+        self.assertIn("No valid structured payload", context["parse_error_message"])
+
+    def test_wrong_note_count_raises_writer_error(self):
+        with patch(
+            "writer.urllib.request.urlopen",
+            return_value=FakeResponse(make_notes_response(["Only one note."])),
+        ):
+            with self.assertRaisesRegex(WriterError, "expected 2 notes"):
+                Writer(prompt_path=self.prompt_path, template_path=self.template_path).run(
+                    [make_curator_item(1), make_curator_item(2)]
+                )
+
+    def test_empty_or_non_text_note_raises_writer_error(self):
+        responses = [
+            make_ollama_response(json.dumps([""])),
+            make_ollama_response(json.dumps([{"note": "not text"}])),
+        ]
+
+        for response in responses:
+            with self.subTest(response=response):
+                with patch(
+                    "writer.urllib.request.urlopen",
+                    return_value=FakeResponse(response),
+                ):
+                    with self.assertRaisesRegex(WriterError, "usable item prose"):
+                        Writer(prompt_path=self.prompt_path, template_path=self.template_path).run([make_curator_item(1)])
+
+    def test_unusable_model_prose_diagnostic_records_model_output_preview(self):
+        model_response = "Here are notes, but not as structured data."
+
+        writer = Writer(prompt_path=self.prompt_path, template_path=self.template_path)
+        planner = Planner(
+            stages=[
+                Stage(
+                    "curator",
+                    lambda: [make_curator_item(1)],
+                    lambda output: (True, "Curated items are available"),
+                ),
+                writer,
+            ],
+            ledger_path=Path(self.temporary_directory.name) / "output" / "ledger.json",
+        )
+
+        with patch(
+            "writer.urllib.request.urlopen",
+            return_value=FakeResponse(make_ollama_response(model_response)),
+        ):
+            result = planner.run()
+
+        self.assertFalse(result.succeeded)
+        ledger = json.loads(planner.ledger_path.read_text(encoding="utf-8"))
+        writer_entry = ledger["stages"]["writer"]
+        diagnostic_file = Path(writer_entry["diagnostic_path"])
+        diagnostic = json.loads(diagnostic_file.read_text(encoding="utf-8"))
+
+        self.assertTrue(diagnostic_file.exists())
+        self.assertEqual("model_output_parse", diagnostic["failure_category"])
+        self.assertIn(model_response, diagnostic["raw_model_text_preview"])
+        self.assertIn("parse_error_message", diagnostic)
+        self.assertNotIn("api_key", json.dumps(diagnostic).lower())
 
     def test_validation_succeeds_for_complete_message_with_all_items(self):
         items = [make_curator_item(1), make_curator_item(2)]

@@ -10,6 +10,7 @@ from typing import Any
 
 from diagnostics import DiagnosticError, external_http_context
 from prompt_loader import PromptLoadError, load_prompt
+from structured_output import StructuredOutputError, extract_json_payload
 
 
 OLLAMA_MODEL = "gemma4:e4b"
@@ -146,22 +147,32 @@ class Writer:
     @staticmethod
     def _parse_notes(model_response: str, expected_count: int) -> list[str]:
         try:
-            parsed = json.loads(model_response)
-        except json.JSONDecodeError as error:
-            raise WriterError(f"Ollama returned no usable item prose: {error}") from error
-
-        if not isinstance(parsed, list):
-            raise WriterError("Ollama returned no usable item prose: expected a JSON array")
+            parsed = extract_json_payload(model_response, list)
+        except StructuredOutputError as error:
+            raise WriterError(
+                f"Ollama returned no usable item prose: {error}",
+                _model_note_context(model_response, str(error)),
+            ) from error
 
         notes = []
         for note in parsed:
             if not isinstance(note, str) or not note.strip():
-                raise WriterError("Ollama returned no usable item prose")
+                raise WriterError(
+                    "Ollama returned no usable item prose",
+                    _model_note_context(
+                        model_response,
+                        "structured note list contained an empty or non-text note",
+                    ),
+                )
             notes.append(note.strip())
 
         if len(notes) != expected_count:
             raise WriterError(
-                f"Ollama returned no usable item prose: expected {expected_count} notes, got {len(notes)}"
+                f"Ollama returned no usable item prose: expected {expected_count} notes, got {len(notes)}",
+                _model_note_context(
+                    model_response,
+                    f"expected {expected_count} notes, got {len(notes)}",
+                ),
             )
 
         return notes
@@ -241,3 +252,12 @@ class Writer:
             if any(character.isalnum() for character in text):
                 return True
         return False
+
+
+def _model_note_context(model_response: str, parse_error_message: str) -> dict[str, Any]:
+    return {
+        "failure_category": "model_output_parse",
+        "provider_name": "Ollama",
+        "raw_model_text_preview": model_response,
+        "parse_error_message": parse_error_message,
+    }

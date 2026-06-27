@@ -667,3 +667,10 @@
 - Scenario 7, Runtime Behavior Is Unchanged: PASS — explicit profile selection, default-profile resolution, and missing-default failure all produce the same observable outcomes as before; no prompt files, template files, profile content, delivery behavior, or model-provider behavior was altered by this cleanup.
 - Scenario 8, Repository Tests Still Pass Without Live External Calls: PASS — all 144 repository tests pass under controlled inputs and mocks, covering explicit profile selection, controlled default-profile resolution, controlled missing-default failure, checked-in configuration consistency, and existing configuration, stage, Writer, delivery, and ledger behavior, with no live Gemini, OpenAI, Ollama, Telegram, Bandcamp, or OpenClaw call required.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-27
+
+- Spec used: `specs/writer_structured_note_tolerance_feature.md`.
+- Summary of work completed: Writer now accepts generated item notes when a valid structured note list is returned directly, wrapped in Markdown formatting, or surrounded by explanatory text. Writer still preserves Curator titles, source URLs, item inclusion, and ascending rank order in the final outbound message, and unusable generated-note responses now produce diagnostics with bounded model-output context.
+- Assumptions made: Valid generated notes may be recovered from common local-model formatting as long as the recovered note list has exactly one non-empty text note per curated item. No new dependencies were added.
+- Gaps or suspected bugs: Real Gemini, OpenAI, Ollama, Telegram, Bandcamp, and OpenClaw calls were not run during implementation; live runtime confirmation remains for a separate evaluation session.
