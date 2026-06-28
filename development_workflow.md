@@ -70,14 +70,39 @@ The Planner reads:
 
 The Planner performs an initial architectural review.
 
-The Planner decomposes the goal into a series of manageable tasks.
+The Planner initializes the Work File using the project's standard structure.
+
+The standard top-level sections are:
+
+- Goal
+- Initial Architectural Review
+- Tasks
+- Recommended Future Work Files
+- Governance
+- Final Summary
+
+The Planner records the results of the architectural review.
+
+The Planner decomposes the feature goal into a series of manageable tasks.
 
 The Planner records these tasks in the Work File.
 
 The task list may evolve during development.
 
-The Planner may add, remove, reorder, or refine tasks as new
-implementation findings are made.
+The Planner may:
+
+- create new tasks
+- reorder tasks
+- refine tasks
+- remove obsolete tasks
+
+as new implementation observations, evaluation results, or governance findings are produced.
+
+The Planner may add detail within the standard Work File sections as needed.
+
+The Planner should not create additional top-level sections unless the workflow is updated.
+
+Information that can be derived from existing Work File content should not be duplicated.
 
 ------------------------------------------------------------------------
 
@@ -137,7 +162,7 @@ The Planner records the returned information in the Work File.
 
 # Evaluation
 
-After implementation is complete, the Planner spawns a fresh evaluation-authoring subagent.
+After a task implementation is complete, the Planner spawns a fresh evaluation-authoring subagent.
 
 The evaluation-authoring subagent receives:
 
@@ -180,7 +205,13 @@ The Evaluation Agent returns:
 
 The Evaluation Agent then terminates.
 
-The Planner records the evaluation results in the Work File.
+The Planner records the evaluation results and supporting observations in the Work File.
+
+If the evaluation returns PASS WITH WARNINGS:
+
+- The Planner reviews the warnings.
+- If the Planner determines that additional current-scope work is required, it creates one or more new tasks.
+- Otherwise, the task is considered complete.
 
 ------------------------------------------------------------------------
 
@@ -227,26 +258,49 @@ When every task has completed successfully:
 
 The Planner starts a fresh Governance Review Agent.
 
+The Governance Review Agent receives:
+
+- development_workflow.md
+- governance.md
+- architecture.md
+- the current Work File
+- all completed specifications
+- all completed evaluations
+
 The Governance Review Agent evaluates the completed feature against:
 
--   governance.md
--   architecture.md
+- governance.md
+- architecture.md
 
 Possible outcomes:
 
--   PASS
--   PASS WITH WARNINGS
--   FAIL
+- PASS
+- PASS WITH WARNINGS
+- FAIL
 
-If Governance Review fails:
+The Governance Review Agent returns:
 
-- The Planner records the governance findings in the Work File.
+- governance result
+- governance findings
+
+The Governance Review Agent then terminates.
+
+The Planner records the governance results and findings in the Work File.
+
+If Governance Review returns PASS:
+
+- The feature is ready for Director acceptance.
+
+If Governance Review returns PASS WITH WARNINGS:
+
+- The Planner reviews the governance findings.
+- If the Planner determines that additional current-scope work is required, it creates one or more new tasks.
+- Otherwise, the feature is ready for Director acceptance.
+
+If Governance Review returns FAIL:
+
 - The Planner creates one or more new tasks to address the governance findings.
 - The workflow resumes from the next incomplete task.
-
-If Governance Review passes:
-
-The feature is considered complete.
 
 ------------------------------------------------------------------------
 

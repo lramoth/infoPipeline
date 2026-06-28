@@ -22,7 +22,11 @@ The Director is responsible for:
 - approving evaluation criteria
 - selecting between competing solutions
 - accepting or rejecting completed work
-Agent-generated specifications and evaluations are allowed and encouraged when they improve clarity, coverage, or quality. Human approval is required before they become project requirements.
+Agent-generated specifications and evaluations are allowed and encouraged.
+
+During autonomous feature development, the Planner uses these artifacts to coordinate implementation, evaluation, and governance.
+
+The Director accepts or rejects the completed feature. Specifications, evaluations, and governance findings serve as supporting evidence for that decision.
 
 ### Specification Boundary
 Specifications describe observable behavior.
@@ -78,11 +82,17 @@ behavior.
 Otherwise, improvements should be recorded as recommendations for future
 Work Files.
 
+## Approval Semantics
+During autonomous feature development, specifications and evaluations are workflow artifacts produced by agents.
+Specifications and evaluations do not require separate Director approval before implementation or evaluation unless the Director explicitly requests it.
+The Director accepts or rejects the completed feature.
+Specifications, evaluations, evaluation results, governance findings, and the Work File together provide the supporting evidence for the Director's final acceptance decision.
+
 ## Acceptance Criteria
 A feature is considered complete only when:
-1. An approved specification exists.
+1. A completed specification exists.
 2. The implementation satisfies the specification.
-3. An approved evaluation exists.
+3. A completed evaluation exists.
 4. The evaluation passes.
 5. Governance Review passes.
 6. The Director accepts the result.

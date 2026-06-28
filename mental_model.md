@@ -70,7 +70,13 @@ The Planner coordinates the complete feature lifecycle.
 
 The Planner maintains the Work File as the persistent memory of the feature, delegates work to specialized subagents, records durable decisions, and determines what should happen next.
 
-The Planner does not implement code or evaluate results.
+The Planner does not implement code and does not evaluate whether implementation behavior satisfies a specification.
+
+The Planner does evaluate workflow decisions, including whether implementation observations should become new tasks, future Work Files, or no action.
+
+The Planner may also determine whether the completed set of work appears ready for Governance Review, but architectural acceptance belongs to Governance and final acceptance belongs to the Director.
+
+The Planner reasons privately but records only durable decisions.
 
 ---
 
