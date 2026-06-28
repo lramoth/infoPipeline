@@ -23,7 +23,7 @@ Each participant owns one concern.
 Director
     owns intent
 
-Planner
+Planner Agent
     owns state
 
 Implementation Agents
@@ -62,21 +62,21 @@ The Director does not perform implementation.
 
 ---
 
-## Planner
+## Planner Agent
 
 **Owns state.**
 
-The Planner coordinates the complete feature lifecycle.
+The Planner agent coordinates the complete feature lifecycle.
 
-The Planner maintains the Work File as the persistent memory of the feature, delegates work to specialized subagents, records durable decisions, and determines what should happen next.
+The Planner agent maintains the Work File as the persistent memory of the feature, delegates work to specialized subagents, records durable decisions, and determines what should happen next.
 
-The Planner does not implement code and does not evaluate whether implementation behavior satisfies a specification.
+The Planner agent does not implement code and does not evaluate whether implementation behavior satisfies a specification.
 
-The Planner does evaluate workflow decisions, including whether implementation observations should become new tasks, future Work Files, or no action.
+The Planner agent does evaluate workflow decisions, including whether implementation observations should become new tasks, future Work Files, or no action.
 
-The Planner may also determine whether the completed set of work appears ready for Governance Review, but architectural acceptance belongs to Governance and final acceptance belongs to the Director.
+The Planner agent may also determine whether the completed set of work appears ready for Governance Review, but architectural acceptance belongs to Governance and final acceptance belongs to the Director.
 
-The Planner reasons privately but records only durable decisions.
+The Planner agent reasons privately but records only durable decisions.
 
 ---
 
@@ -88,7 +88,7 @@ Implementation agents transform approved specifications into working software.
 
 During implementation they may identify architectural improvements, missing behavior, or opportunities for future work.
 
-Implementation agents recommend these findings to the Planner but never decide whether they become additional work.
+Implementation agents recommend these findings to the Planner agent but never decide whether they become additional work.
 
 ---
 
@@ -96,7 +96,7 @@ Implementation agents recommend these findings to the Planner but never decide w
 
 **Own evaluation design.**
 
-After implementation is complete, evaluation authoring agents create evaluations based on the completed implementation and the approved specification.
+After implementation is complete, evaluation authoring agents create evaluations based on the specification, Work File, and documented project expectations.
 
 Separating evaluation authoring from implementation preserves the project's holdout philosophy and reduces implementation bias.
 
@@ -110,7 +110,7 @@ Evaluation agents execute evaluations without modifying the implementation.
 
 Their responsibility is to determine whether observable behavior satisfies the specification.
 
-Evaluation agents report results back to the Planner.
+Evaluation agents report results back to the Planner agent.
 
 ---
 

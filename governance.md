@@ -18,13 +18,12 @@ The human acts as Director rather than primary implementer.
 Agents may propose specifications, implementations, evaluations, and improvements. These proposals are advisory until reviewed and accepted by the Director.
 The Director is responsible for:
 - defining the problem or desired outcome
-- approving specifications
-- approving evaluation criteria
+- establishing project governance
 - selecting between competing solutions
 - accepting or rejecting completed work
 Agent-generated specifications and evaluations are allowed and encouraged.
 
-During autonomous feature development, the Planner uses these artifacts to coordinate implementation, evaluation, and governance.
+During autonomous feature development, the Planner agent uses these artifacts to coordinate implementation, evaluation, and governance.
 
 The Director accepts or rejects the completed feature. Specifications, evaluations, and governance findings serve as supporting evidence for that decision.
 
@@ -42,8 +41,8 @@ Implementation decisions belong to design discussions, code reviews,
 or implementation plans, not behavioral specifications.
 
 ## Separation of Responsibilities
-Whenever practical, proposal, implementation, evaluation, and governance
-review should be performed by different actors.
+Whenever practical, implementation, evaluation, and governance review should be performed by different actors.
+During autonomous feature development, specification authoring and implementation for an individual task may be performed by the same implementation subagent.
 Separation of responsibilities reduces self-validation and increases
 confidence in accepted behavior.
 
@@ -76,7 +75,7 @@ When proposing or implementing changes, agents should consider:
 Implementation may reveal architectural improvements that were not
 anticipated when the feature was proposed.
 Agents are encouraged to surface these improvements.
-The Planner may incorporate improvements into the current feature when
+The Planner agent may incorporate improvements into the current feature when
 they are necessary to satisfy governance or complete the intended
 behavior.
 Otherwise, improvements should be recorded as recommendations for future

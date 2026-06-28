@@ -13,7 +13,7 @@ specifications, evaluations, and governance reviews.
 
 The workflow is centered around a **Planner Agent** and a **Work File**.
 
-The Planner orchestrates work.
+The Planner agent orchestrates work.
 
 The Work File records decisions rather than conversation. Information that can be derived from the Work File should not be duplicated elsewhere.
 
@@ -21,7 +21,7 @@ The Work File records decisions rather than conversation. Information that can b
 
 # Principles
 
--   The Planner is the only long-running agent.
+-   The Planner agent is the only long-running agent.
 -   All implementation work is performed by short-lived subagents.
 -   Every subagent begins with a fresh context.
 -   The Work File is the single source of truth for feature progress.
@@ -54,23 +54,23 @@ Initial structure:
 
 ## Goal
 
-Send the Writer output to Telegram after a successful Planner run.
+Send the Writer output to Telegram after a successful pipeline run.
 ```
 
 ------------------------------------------------------------------------
 
-## 2. Planner Initialization
+## 2. Planner Agent Initialization
 
-The Planner reads:
+The Planner agent reads:
 
 - the Work File
 - development_workflow.md
 - governance.md
 - architecture.md
 
-The Planner performs an initial architectural review.
+The Planner agent performs an initial architectural review.
 
-The Planner initializes the Work File using the project's standard structure.
+The Planner agent initializes the Work File using the project's standard structure.
 
 The standard top-level sections are:
 
@@ -81,15 +81,15 @@ The standard top-level sections are:
 - Governance
 - Final Summary
 
-The Planner records the results of the architectural review.
+The Planner agent records the results of the architectural review.
 
-The Planner decomposes the feature goal into a series of manageable tasks.
+The Planner agent decomposes the feature goal into a series of manageable tasks.
 
-The Planner records these tasks in the Work File.
+The Planner agent records these tasks in the Work File.
 
 The task list may evolve during development.
 
-The Planner may:
+The Planner agent may:
 
 - create new tasks
 - reorder tasks
@@ -98,17 +98,17 @@ The Planner may:
 
 as new implementation observations, evaluation results, or governance findings are produced.
 
-The Planner may add detail within the standard Work File sections as needed.
+The Planner agent may add detail within the standard Work File sections as needed.
 
-The Planner should not create additional top-level sections unless the workflow is updated.
+The Planner agent should not create additional top-level sections unless the workflow is updated.
 
 Information that can be derived from existing Work File content should not be duplicated.
 
 ------------------------------------------------------------------------
 
-# Planner Responsibilities
+# Planner Agent Responsibilities
 
-The Planner:
+The Planner agent:
 
 - owns the Work File
 - determines the next unfinished task
@@ -121,13 +121,19 @@ The Planner:
 - records recommended future Work Files
 - initiates Governance Review
 
-The Planner never edits implementation code.
+The Planner agent never edits implementation code.
 
 ------------------------------------------------------------------------
 
 # Subagent Workflow
 
-For each task, the Planner spawns a fresh implementation subagent.
+For each task, the Planner agent spawns a fresh implementation subagent.
+
+Specifications are stored in `specs/`.
+
+Evaluations are stored in `evals/`.
+
+Artifact filenames recorded in the Work File should be repository-relative paths.
 
 The implementation subagent receives:
 
@@ -156,13 +162,13 @@ The implementation subagent returns:
 
 The implementation subagent then terminates.
 
-The Planner records the returned information in the Work File.
+The Planner agent records the returned information in the Work File.
 
 ------------------------------------------------------------------------
 
 # Evaluation
 
-After a task implementation is complete, the Planner spawns a fresh evaluation-authoring subagent.
+After a task implementation is complete, the Planner agent spawns a fresh evaluation-authoring subagent.
 
 The evaluation-authoring subagent receives:
 
@@ -175,11 +181,11 @@ The evaluation-authoring subagent receives:
 The evaluation-authoring subagent:
 
 1. creates an evaluation for the completed implementation
-2. returns the evaluation filename to the Planner
+2. returns the evaluation filename to the Planner agent
 
 The evaluation-authoring subagent then terminates.
 
-The Planner then spawns a completely fresh Evaluation Agent.
+The Planner agent then spawns a completely fresh Evaluation Agent.
 
 The Evaluation Agent receives:
 
@@ -205,17 +211,17 @@ The Evaluation Agent returns:
 
 The Evaluation Agent then terminates.
 
-The Planner records the evaluation results and supporting observations in the Work File.
+The Planner agent records the evaluation results and supporting observations in the Work File.
 
 If the evaluation returns PASS WITH WARNINGS:
 
-- The Planner reviews the warnings.
-- If the Planner determines that additional current-scope work is required, it creates one or more new tasks.
+- The Planner agent reviews the warnings.
+- If the Planner agent determines that additional current-scope work is required, it creates one or more new tasks.
 - Otherwise, the task is considered complete.
 
 ------------------------------------------------------------------------
 
-# Planner Loop
+# Planner Agent Loop
 
 For each task:
 
@@ -226,9 +232,9 @@ For each task:
 
 If the evaluation fails:
 
-- The Planner records the evaluation result in the Work File.
-- The Planner creates a new iteration for the current task.
-- The Planner spawns a fresh implementation subagent for the new iteration.
+- The Planner agent records the evaluation result in the Work File.
+- The Planner agent creates a new iteration for the current task.
+- The Planner agent spawns a fresh implementation subagent for the new iteration.
 - The task loop repeats.
 
 If implementation observations identify additional required work:
@@ -256,7 +262,7 @@ When a task is complete:
 
 When every task has completed successfully:
 
-The Planner starts a fresh Governance Review Agent.
+The Planner agent starts a fresh Governance Review Agent.
 
 The Governance Review Agent receives:
 
@@ -285,7 +291,7 @@ The Governance Review Agent returns:
 
 The Governance Review Agent then terminates.
 
-The Planner records the governance results and findings in the Work File.
+The Planner agent records the governance results and findings in the Work File.
 
 If Governance Review returns PASS:
 
@@ -293,13 +299,13 @@ If Governance Review returns PASS:
 
 If Governance Review returns PASS WITH WARNINGS:
 
-- The Planner reviews the governance findings.
-- If the Planner determines that additional current-scope work is required, it creates one or more new tasks.
+- The Planner agent reviews the governance findings.
+- If the Planner agent determines that additional current-scope work is required, it creates one or more new tasks.
 - Otherwise, the feature is ready for Director acceptance.
 
 If Governance Review returns FAIL:
 
-- The Planner creates one or more new tasks to address the governance findings.
+- The Planner agent creates one or more new tasks to address the governance findings.
 - The workflow resumes from the next incomplete task.
 
 ------------------------------------------------------------------------
@@ -311,7 +317,7 @@ The workflow completes when:
 - every task has passed evaluation
 - Governance Review passes
 - the Director accepts the completed feature
-- the Planner records a final implementation summary
+- the Planner agent records a final implementation summary
 - no additional work remains
 
 The completed Work File becomes the permanent history of how the feature evolved.
@@ -325,7 +331,7 @@ The completed Work File becomes the permanent history of how the feature evolved
 
 ## Goal
 
-Send the Writer output to Telegram after a successful Planner run.
+Send the Writer output to Telegram after a successful pipeline run.
 
 ## Tasks
 
@@ -349,9 +355,9 @@ Send the Writer output to Telegram after a successful Planner run.
         - Result: PASS
     - Implementation Observations
         - Retry policy should be configurable.
-            - Planner Decision: Create Task 5.
+            - Planner Agent Decision: Create Task 5.
         - Multiple delivery destinations would be valuable.
-            - Planner Decision: Recommend Future Work File.
+            - Planner Agent Decision: Recommend Future Work File.
             - Suggested Work File: `work/multi_destination_delivery.md`
 
 - Task 3: Add configuration support
@@ -360,10 +366,10 @@ Send the Writer output to Telegram after a successful Planner run.
     - Eval: `evals/configuration_support.eval.md`
     - Result: PASS
 
-- Task 4: Integrate Planner with Delivery
-    - Spec: `specs/planner_delivery_integration.md`
-    - Summary: Planner sends Writer output through configured delivery module.
-    - Eval: `evals/planner_delivery_integration.eval.md`
+- Task 4: Integrate Pipeline with Delivery
+    - Spec: `specs/pipeline_delivery_integration.md`
+    - Summary: Pipeline sends Writer output through configured delivery module.
+    - Eval: `evals/pipeline_delivery_integration.eval.md`
     - Result: PASS
 
 - Task 5: Make retry policy configurable
