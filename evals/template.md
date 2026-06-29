@@ -1,17 +1,21 @@
 # Eval: Eval Name
 
-Purpose
-Validate the observable behavior described in `spec name`.
+## Purpose
+
+Validate only the observable behavior described in `spec name`.
+
+Do not infer requirements that are not stated in the referenced specification.
 
 Do not grade or report implementation details in eval_log.md, including:
 - class names
-- method names 
+- method names
 - dataclasses
-- validation-result shapes
+- return-value shapes
 - internal data structures.
+- helper inputs
+- algorithms
 
-Grade only observable behavior.
-Do not infer requirements that are not stated in the specification.
+Write scenario results from the product or artifact reader's perspective.
 
 ## Evaluation Environment
 Unless explicitly required by the spec:
@@ -20,21 +24,41 @@ Unless explicitly required by the spec:
 - Do not send emails, messages, or notifications.
 - Use mocks, fixtures, or controlled test inputs.
 
-## Scenario 1: Name
-Given,
-When,
-Then:
-- Add observables here
+## Scenario 1: Successful Observable Behavior
+Given:
+- Add the starting conditions visible to a user, caller, operator, or artifact reader.
 
-## Scenario 2: Name
-Given,
-When,
+When:
+- Add the action being evaluated.
+
 Then:
-- Add observables here
+- Add the observable successful outcome.
+- Add any required absence of side effects.
+
+## Scenario 2: Required Failure Or Rejection Behavior
+Given:
+- Add the invalid, missing, or failing condition described by the specification.
+
+When:
+- Add the action being evaluated.
+
+Then:
+- Add the readable failure, rejection, halted work, or preserved state that must be observed.
+- Add any downstream action that must not occur.
+
+Add more scenarios only when the specification states more distinct observable requirements.
 
 ## Grading instructions
 For each scenario:
 - PASS if the observable behavior matches the specification.
 - FAIL if the observable behavior differs from the specification.
-Append results to `eval_log.md` and provide an overall verdict.
+
+Append an evaluation entry to `eval_log.md` using the format in `AGENTS.md`:
+- eval file used
+- PASS/FAIL result for each scenario
+- one-sentence product-behavior reason for each scenario result
+- overall verdict
+
 Overall verdict is PASS only if every scenario passes.
+
+Evaluation sessions must not write build-log entries.

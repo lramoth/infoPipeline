@@ -706,3 +706,10 @@
 - Scenario 4, Normal Pipeline Invocation Is Unchanged: PASS — controlled normal invocations still report the existing pipeline result behavior, preserve profile selection and delivery outcomes, and do not print a version report unless requested.
 - Scenario 5, Repository Checks Cover Version Behavior Without Live Calls: PASS — the controlled automated checks cover the version output, successful exit, absence of pipeline side effects, and precedence with supported options without requiring any live external endpoint.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-29
+
+- Spec used: `specs/standardize_spec_eval_templates_feature.md`.
+- Summary of work completed: Future specification drafts now start from prompts that emphasize externally observable requirements, explicit scope, visible success and failure behavior, and build-session logging. Future evaluation drafts now start from prompts that emphasize referenced-spec-only grading, success and failure scenarios, controlled evaluation environments, product-behavior result reasons, and evaluation-session logging.
+- Assumptions made: The reusable templates are documentation artifacts for future authors, so standardizing their authoring guidance is sufficient without changing runtime pipeline behavior. No new dependencies were added.
+- Gaps or suspected bugs: No live Gemini, OpenAI, Ollama, Bandcamp, Telegram, or other external calls were run; this template update does not include the separate evaluation artifact that a later evaluation-authoring session will create.
