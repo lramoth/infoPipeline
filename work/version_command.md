@@ -68,6 +68,34 @@ Use those documents to guide all workflow decisions while executing this Work Fi
 
 ## Governance
 
+- Result: PASS
+- Findings:
+  - The feature is scoped to the command-line entry point and exits before
+    Planner construction, pipeline stage execution, provider calls, ledger
+    writes, or delivery.
+  - The specification and evaluation describe observable behavior rather than
+    implementation details.
+  - Normal pipeline output remains JSON, while `--version` is command metadata
+    that avoids pipeline runtime behavior.
+  - Keeping version metadata local to the command-line entry point is acceptable
+    for this feature because packaging and release metadata are out of scope;
+    centralization is recorded as future work.
+- Required current-scope tasks: None.
+
 ---
 
 ## Final Summary
+
+- Outcome: Ready for Director acceptance.
+- Completed behavior: `python3 planner.py --version` reports
+  `infoPipeline 0.1.0` as a single standard-output line, exits successfully,
+  and does not run the pipeline, call providers, write a ledger, or attempt
+  delivery. When `--version` is provided with another supported option, the
+  version report still takes precedence.
+- Supporting artifacts:
+  - Spec: `specs/version_command_feature.md`
+  - Eval: `evals/version_command_feature.eval.md`
+  - Build log: `eval_log.md`
+  - Evaluation result: PASS
+  - Governance result: PASS
+- Director Action: Review branch and merge if accepted.
