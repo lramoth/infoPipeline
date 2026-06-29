@@ -769,6 +769,30 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(payload["output"], "profile message")
         self.assertEqual(stderr.getvalue(), "")
 
+    def test_cli_reports_version_and_exits_without_running_pipeline(self):
+        stdout = StringIO()
+        stderr = StringIO()
+        with patch("planner.Planner") as planner_class, \
+            redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(["--version"])
+
+        planner_class.assert_not_called()
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stdout.getvalue(), "infoPipeline 0.1.0\n")
+        self.assertEqual(stderr.getvalue(), "")
+
+    def test_cli_version_wins_when_profile_is_also_provided(self):
+        stdout = StringIO()
+        stderr = StringIO()
+        with patch("planner.Planner") as planner_class, \
+            redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(["--profile", "finance", "--version"])
+
+        planner_class.assert_not_called()
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(stdout.getvalue(), "infoPipeline 0.1.0\n")
+        self.assertEqual(stderr.getvalue(), "")
+
     def test_cli_keeps_stage_stdout_out_of_final_result_stdout(self):
         stdout = StringIO()
         stderr = StringIO()

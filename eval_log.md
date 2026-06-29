@@ -689,3 +689,10 @@
 - Scenario 9, Successful Writer Runs Do Not Create Diagnostics: PASS — when the Writer succeeds, no diagnostic record is created and the ledger's Writer stage entry contains no reference to diagnostic information.
 - Scenario 10, Existing Boundaries Are Preserved: PASS — Researcher and Curator behavior are unchanged, delivery still runs only after all pipeline stages succeed, no new external service is required, the Writer does not perform research or additional external calls, and failed model responses are not retried.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-29
+
+- Spec used: `specs/version_command_feature.md`.
+- Summary of work completed: `python3 planner.py --version` now reports `infoPipeline 0.1.0` as a single standard-output line, exits successfully, and does not start a pipeline run. When `--version` is provided with another supported option, the version report is still returned without running the pipeline.
+- Assumptions made: The first application version is `0.1.0`, and the version report is a plain text command-line response rather than the JSON result object used for pipeline runs. No new dependencies were added.
+- Gaps or suspected bugs: Live Gemini, OpenAI, Ollama, Bandcamp, and Telegram calls were not run during implementation; this command is intended to avoid those calls.

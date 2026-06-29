@@ -18,6 +18,7 @@ from pipeline_config import load_delivery_config, load_pipeline, profile_ledger_
 
 
 ValidationResult = tuple[bool, str]
+APP_VERSION = "0.1.0"
 
 
 @dataclass(frozen=True)
@@ -392,11 +393,19 @@ def main(argv: list[str] | None = None) -> int:
     """Run the default configured pipeline once from the command line."""
     parser = argparse.ArgumentParser(description="Run the configured infoPipeline once.")
     parser.add_argument(
+        "--version",
+        action="store_true",
+        help="Report the application version and exit.",
+    )
+    parser.add_argument(
         "--profile",
         dest="profile_name",
         help="Configured profile to run. Defaults to config/pipeline.yaml default_profile.",
     )
     args = parser.parse_args(argv)
+    if args.version:
+        print(f"infoPipeline {APP_VERSION}")
+        return 0
 
     try:
         planner = Planner(profile_name=args.profile_name)
