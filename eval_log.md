@@ -696,3 +696,13 @@
 - Summary of work completed: `python3 planner.py --version` now reports `infoPipeline 0.1.0` as a single standard-output line, exits successfully, and does not start a pipeline run. When `--version` is provided with another supported option, the version report is still returned without running the pipeline.
 - Assumptions made: The first application version is `0.1.0`, and the version report is a plain text command-line response rather than the JSON result object used for pipeline runs. No new dependencies were added.
 - Gaps or suspected bugs: Live Gemini, OpenAI, Ollama, Bandcamp, and Telegram calls were not run during implementation; this command is intended to avoid those calls.
+
+## Evaluation — 2026-06-29
+
+- Eval file used: `evals/version_command_feature.eval.md`.
+- Scenario 1, Version Output: PASS — invoking the command with `--version` prints exactly `infoPipeline 0.1.0` as one standard-output line and exits successfully.
+- Scenario 2, Version Does Not Run Pipeline: PASS — requesting the version completes immediately with no visible pipeline activity, no provider or delivery contact, and no ledger change.
+- Scenario 3, Version Takes Precedence With Supported Options: PASS — when a supported profile option is supplied together with `--version`, the command still prints only the version line, exits successfully, and produces no pipeline side effects.
+- Scenario 4, Normal Pipeline Invocation Is Unchanged: PASS — controlled normal invocations still report the existing pipeline result behavior, preserve profile selection and delivery outcomes, and do not print a version report unless requested.
+- Scenario 5, Repository Checks Cover Version Behavior Without Live Calls: PASS — the controlled automated checks cover the version output, successful exit, absence of pipeline side effects, and precedence with supported options without requiring any live external endpoint.
+- Overall verdict: PASS.
