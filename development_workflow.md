@@ -54,8 +54,9 @@ Only the Director may accept completed work for merge into `main`.
 
 The Director:
 
--   creates a feature branch from `main`
--   creates a new Work File in `work/`
+- creates a feature branch from `main`
+- creates a new Work File in `work/`
+- The Director commits the initial Work File to the active feature branch before the Planner agent begins execution.
 
 Example:
 
