@@ -71,6 +71,16 @@ Initial structure:
 ## Goal
 
 Send the Writer output to Telegram after a successful pipeline run.
+
+## Initial Architectural Review
+
+## Tasks
+
+## Recommended Future Work Files
+
+## Governance
+
+## Final Summary
 ```
 
 ------------------------------------------------------------------------
@@ -411,6 +421,8 @@ Send the Writer output to Telegram after a successful pipeline run.
     - Summary: Added configurable retry count.
     - Eval: `evals/retry_configuration.eval.md`
     - Result: PASS
+
+## Recommended Future Work Files
 
 ## Governance
 
