@@ -36,7 +36,9 @@ Use those documents to guide all workflow decisions while executing this Work Fi
     calls.
   - Iteration 1
     - Spec: `specs/version_command_feature.md`
+    - Eval: `evals/version_command_feature.eval.md`
     - Implementation commit: `678f97c293cb1240e0d8459adef16c415ea1caba`
+    - Evaluation authoring commit: `e75b032281b5e7e5ce76a2bdfff33a03e493461b`
     - Summary: `python3 planner.py --version` reports `infoPipeline 0.1.0`
       as a single standard-output line, exits successfully, and does not start
       a pipeline run. When provided alongside another supported option, the
