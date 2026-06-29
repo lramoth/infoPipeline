@@ -47,6 +47,7 @@ Use those documents to guide all workflow decisions while executing this Work Fi
       - Planner Agent Decision: Handle through the required evaluation phase
         for this task rather than creating a separate implementation task.
   - Recommended Future Work Files: None.
+  - Eval: `evals/standardize_spec_eval_templates_feature.eval.md`
 
 ## Recommended Future Work Files
 
