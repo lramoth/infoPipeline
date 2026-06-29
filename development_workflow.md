@@ -32,6 +32,22 @@ The Work File records decisions rather than conversation. Information that can b
 
 ------------------------------------------------------------------------
 
+## Feature Branch
+
+All workflow commits are made to the active feature branch.
+
+Commits preserve durable repository state between fresh subagents.
+
+Subagents commit the artifacts and changes they produce before terminating.
+
+Whenever the Planner agent updates the Work File, it commits the updated Work File to the active feature branch before spawning the next subagent or ending the workflow.
+
+Commits do not imply feature acceptance or permission to merge into `main`.
+
+Only the Director may accept completed work for merge into `main`.
+
+------------------------------------------------------------------------
+
 # Feature Lifecycle
 
 ## 1. Director Creates Feature
@@ -160,6 +176,12 @@ The implementation subagent returns:
 - recommended new tasks
 - recommended future Work Files
 
+Before terminating, the implementation subagent commits the specification, implementation changes, and any implementation artifacts it produced to the active feature branch.
+
+Commits to the feature branch preserve durable workflow state between fresh subagents.
+
+Commits to the feature branch do not imply feature acceptance or permission to merge into `main`.
+
 The implementation subagent then terminates.
 
 The Planner agent records the returned information in the Work File.
@@ -182,6 +204,10 @@ The evaluation-authoring subagent:
 
 1. creates an evaluation for the completed implementation
 2. returns the evaluation filename to the Planner agent
+
+Before terminating, the evaluation-authoring subagent commits the evaluation artifact it produced to the active feature branch.
+
+Commits to the feature branch do not imply feature acceptance or permission to merge into `main`.
 
 The evaluation-authoring subagent then terminates.
 
@@ -209,9 +235,15 @@ The Evaluation Agent returns:
 - evaluation result
 - supporting observations
 
+Before terminating, the Evaluation Agent commits any evaluation artifacts it produced, including evaluation logs, to the active feature branch.
+
+Commits to the feature branch do not imply feature acceptance or permission to merge into `main`.
+
+Evaluation artifacts are committed regardless of the evaluation result so that the completed evaluation remains part of the permanent feature history.
+
 The Evaluation Agent then terminates.
 
-The Planner agent records the evaluation results and supporting observations in the Work File.
+The Planner agent records the evaluation result and supporting observations in the Work File.
 
 If the evaluation returns PASS WITH WARNINGS:
 
