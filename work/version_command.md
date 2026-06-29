@@ -30,7 +30,7 @@ Use those documents to guide all workflow decisions while executing this Work Fi
 ## Tasks
 
 - Task 1: Add version reporting command-line behavior.
-  - Status: Implementation complete; evaluation pending
+  - Status: Complete
   - Scope: Define and implement observable `--version` behavior for the
     command-line entry point, then evaluate it independently from live provider
     calls.
@@ -39,6 +39,8 @@ Use those documents to guide all workflow decisions while executing this Work Fi
     - Eval: `evals/version_command_feature.eval.md`
     - Implementation commit: `678f97c293cb1240e0d8459adef16c415ea1caba`
     - Evaluation authoring commit: `e75b032281b5e7e5ce76a2bdfff33a03e493461b`
+    - Evaluation commit: `e402799a848bb841baaee18c7f49e0ad8a5b2f2e`
+    - Result: PASS
     - Summary: `python3 planner.py --version` reports `infoPipeline 0.1.0`
       as a single standard-output line, exits successfully, and does not start
       a pipeline run. When provided alongside another supported option, the
