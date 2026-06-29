@@ -5,12 +5,10 @@
 Describe the desired end result.
 
 Before beginning, read:
-
 - `development_workflow.md`
 - `governance.md`
 - `architecture.md`
-
-Follow the workflow defined by those documents.
+Use those documents to guide all workflow decisions while executing this Work File.
 
 ---
 
