@@ -32,6 +32,21 @@ Use those documents to guide all workflow decisions while executing this Work Fi
   - Goal: Update the reusable templates so future specs and evals consistently
     describe observable behavior, avoid implementation requirements, and guide
     agents toward the project's build and evaluation logging conventions.
+  - Spec: `specs/standardize_spec_eval_templates_feature.md`
+  - Summary: Standardized the reusable specification and evaluation templates
+    so future artifact authors are guided toward externally observable
+    requirements, explicit success and failure behavior, controlled evaluation
+    environments, and distinct build-session versus evaluation-session logging.
+  - Implementation Observations:
+    - Runtime pipeline behavior was not changed.
+    - `git diff --check` passed during implementation.
+    - No live provider or delivery calls were run because the task updated
+      documentation templates only.
+    - Recommendation: Create and run an evaluation artifact for the
+      standardized templates.
+      - Planner Agent Decision: Handle through the required evaluation phase
+        for this task rather than creating a separate implementation task.
+  - Recommended Future Work Files: None.
 
 ## Recommended Future Work Files
 
