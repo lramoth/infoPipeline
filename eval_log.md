@@ -713,3 +713,14 @@
 - Summary of work completed: Future specification drafts now start from prompts that emphasize externally observable requirements, explicit scope, visible success and failure behavior, and build-session logging. Future evaluation drafts now start from prompts that emphasize referenced-spec-only grading, success and failure scenarios, controlled evaluation environments, product-behavior result reasons, and evaluation-session logging.
 - Assumptions made: The reusable templates are documentation artifacts for future authors, so standardizing their authoring guidance is sufficient without changing runtime pipeline behavior. No new dependencies were added.
 - Gaps or suspected bugs: No live Gemini, OpenAI, Ollama, Bandcamp, Telegram, or other external calls were run; this template update does not include the separate evaluation artifact that a later evaluation-authoring session will create.
+
+## Evaluation — 2026-06-29
+
+- Eval file used: `evals/standardize_spec_eval_templates_feature.eval.md`.
+- Scenario 1, Specification Template Guides Observable Authoring: PASS — the specification template directs future authors toward externally observable product or artifact behavior and away from internal mechanisms unless those details are public requirements.
+- Scenario 2, Specification Template Provides Required Sections And Build Logging: PASS — the specification template provides the required authoring sections and tells build-session authors to record a build log with the required contents without writing an evaluation entry.
+- Scenario 3, Evaluation Template Guides Black-Box Scenarios: PASS — the evaluation template directs future evaluators to grade only stated specification behavior, include success and required failure expectations, and avoid unstated requirements.
+- Scenario 4, Evaluation Template Provides Evaluation-Log Guidance: PASS — the evaluation template tells evaluation-session authors to append scenario-level PASS or FAIL results, one-sentence product or artifact behavior reasons, and an overall verdict while avoiding build-log entries and internal identifiers.
+- Scenario 5, External Side Effects Are Rejected Unless Required: PASS — the evaluation template presents controlled local inputs as the default approach and discourages live external calls, external system changes, messages, notifications, or delivery actions unless the referenced specification requires them.
+- Scenario 6, Runtime Pipeline Behavior Is Unchanged: PASS — the completed feature leaves command-line pipeline behavior, provider behavior, prompt content, runtime configuration, and delivery behavior unchanged, and template standardization is verifiable without live external calls.
+- Overall verdict: PASS.
