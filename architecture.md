@@ -104,14 +104,71 @@ no profile is selected, the configured `default_profile` is used. Profile runs
 write to profile-specific ledger locations so separate scheduled jobs do not
 overwrite each other's same-day run records.
 
-## Command-line result
+## Command-line interface
 
-Each command-line invocation runs one pipeline pass and prints one parseable
-JSON result object to standard output. Successful results report success,
-include a readable summary, identify the selected profile when known, include
-the final pipeline output, and point to the ledger path. Failed results report
-failure, include a readable summary and reason, identify the failed stage or
-delivery provider when applicable, and include artifact paths when available.
+`planner.py` is the command-line entry point. Each invocation either runs one
+configured pipeline pass or handles an application-level command that exits
+before the pipeline runs.
+
+Supported arguments:
+
+- `--profile <profile_name>` selects the configured profile to run or validate.
+  When omitted, the configured `default_profile` from `config/pipeline.yaml` is
+  used. Profile-specific runs write to that profile's ledger location.
+- `--validate-config` loads and assembles the configured pipeline for the
+  selected or default profile, reports whether configuration validation
+  succeeded, and exits without running pipeline stages.
+- `--version` prints the application version and exits without running the
+  pipeline. When combined with other supported options, `--version` takes
+  precedence.
+
+Normal pipeline invocation:
+
+```text
+python3 planner.py
+```
+
+Runs one pipeline pass for the configured default profile.
+
+Profile-selected invocation:
+
+```text
+python3 planner.py --profile techno-releases
+```
+
+Runs one pipeline pass for the selected configured profile.
+
+Configuration validation:
+
+```text
+python3 planner.py --validate-config
+python3 planner.py --validate-config --profile techno-releases
+```
+
+Validation checks that the selected or default profile can be loaded and
+assembled. It validates profile selection, stage configuration, required model
+settings, enabled delivery configuration, and configured prompt and template
+paths. It does not run Researcher, Curator, Writer, or Delivery providers; does
+not require live provider credentials or network access; does not write a
+ledger; and does not send delivery messages.
+
+Version reporting:
+
+```text
+python3 planner.py --version
+```
+
+Prints the application name and version as a single standard-output line and
+exits successfully.
+
+Command results:
+
+Normal pipeline runs and configuration validation print one parseable JSON
+result object to standard output. Successful results report success, include a
+readable summary, identify the selected profile when known, and include relevant
+output or validation details. Failed results report failure, include a readable
+summary and reason, identify the failed stage or delivery provider when
+applicable, and include artifact paths when available.
 
 The process exit code agrees with the reported JSON status. Incidental output
 from underlying stages may appear on standard error, but standard output is the

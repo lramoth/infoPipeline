@@ -9,6 +9,7 @@ This project is intentionally developed through:
 - Evals test both success and failure conditions.
 - Code is treated as a black box whenever possible.
 - Runtime observations should inform future work.
+- Durable project documents should reflect implemented application behavior.
 - Build logs describe capabilities, not implementation details.
 - Dependencies are allowed when they avoid reimplementing established functionality.
 - Human review and acceptance are required for all features.
@@ -78,8 +79,18 @@ Agents are encouraged to surface these improvements.
 The Planner agent may incorporate improvements into the current feature when
 they are necessary to satisfy governance or complete the intended
 behavior.
-Otherwise, improvements should be recorded as recommendations for future
-Work Files.
+
+When a feature changes how the application functions, the Planner agent has
+authority to create current-scope tasks to update durable project documents
+that describe that behavior. This includes documented configuration contracts,
+runtime behavior, stage responsibilities, provider responsibilities, command-line
+behavior, external dependencies, and artifact or ledger behavior.
+
+Documentation updates are current-scope when stale or missing documentation
+would make the completed behavior harder to understand, operate, evaluate, or
+govern. They should be recorded as future Work Files only when they describe
+follow-on improvements rather than the behavior completed by the current
+feature.
 
 ## Approval Semantics
 During autonomous feature development, specifications and evaluations are workflow artifacts produced by agents.
