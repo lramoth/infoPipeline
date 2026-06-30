@@ -144,6 +144,35 @@ behavior, durable documentation updates are current-scope work under
 - Planner Agent Decision: Create Task 2 to reject unsupported Bandcamp
   discovery keys and keep the configuration contract narrow and durable.
 
+- Final Result: PASS
+- Final Findings:
+    - Configurable discovery criteria live in pipeline configuration while
+      Bandcamp still owns source interaction, normalization, diagnostics, and
+      errors.
+    - Unsupported Bandcamp discovery keys are rejected before a pipeline run
+      with a readable configuration error.
+    - Model-backed Researcher providers remain prompt-driven and reject
+      source-backed discovery configuration.
+    - Curator, Writer, Delivery, ledger behavior, validation rules, profile
+      selection, prompt paths, templates, and model configuration remain outside
+      the feature's behavioral change.
+    - Durable documentation reflects the implemented narrow Bandcamp discovery
+      contract, and the specification, evaluation, build logs, and evaluation
+      logs are present.
+
 ---
 
 ## Final Summary
+
+- Outcome: Complete pending Director acceptance.
+- Completed Behavior: Source-backed Bandcamp Researcher discovery criteria can
+  be configured in `config/pipeline.yaml`, are validated before a pipeline run,
+  and are used for Bandcamp Discover candidate collection. When discovery
+  criteria are omitted, the previous default Bandcamp discovery behavior remains
+  available. Unsupported Bandcamp discovery keys and discovery configuration on
+  model-backed Researcher providers are rejected before stages run.
+- Evidence: Both implementation tasks passed evaluation, the final Governance
+  Review passed, and the latest full automated check reported 161 passing
+  tests with `python3 planner.py --validate-config` passing for
+  `techno-releases`.
+- Director Action: Review branch and merge if accepted.
