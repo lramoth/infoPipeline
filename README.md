@@ -52,3 +52,8 @@ happens through profiles: each profile supplies the Researcher prompt, Curator
 prompt, Writer prompt, and Writer template paths. Prompt filenames may be
 topic-specific. To retarget the pipeline, select a different profile or add one
 that points at different prompt files rather than changing Python source code.
+
+Source-backed Researcher providers can also declare stage-level discovery
+criteria. The checked-in Bandcamp Researcher configuration uses `discovery` to
+describe its Bandcamp Discover collection criteria; omitting that block keeps
+the provider's default discovery behavior.

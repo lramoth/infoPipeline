@@ -742,3 +742,10 @@
 - Scenario 5, Profile Selection Determines What Is Validated: PASS — invoked with no profile the result reports the configured default profile, and invoked with a named loadable profile the result reports that named profile, each succeeding with an agreeing zero exit status.
 - Scenario 6, Existing Command-Line Behavior Is Unchanged: PASS — version reporting still prints the version and exits 0 with no validation result, and normal-run and profile-selection behavior is unchanged, with a validation result printed only when the validate-config option is provided.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-30
+
+- Spec used: `specs/configurable_researcher_discovery_feature.md`.
+- Summary of work completed: Source-backed Bandcamp Researcher discovery criteria can now be declared in pipeline configuration, validated before a run, and used for Bandcamp Discover candidate collection. Bandcamp Researcher runs without configured discovery continue to use the previous default discovery behavior. The checked-in default pipeline now declares the existing Bandcamp discovery criteria explicitly, and durable documentation describes the source-backed discovery configuration contract.
+- Assumptions made: Bandcamp is the only currently supported source-backed Researcher provider, so the new discovery contract is scoped to Bandcamp Discover criteria. Discovery configuration is a stage-level source-provider setting and is rejected for model-backed Researcher providers, which continue to use prompt paths for discovery behavior. No new dependencies were added.
+- Gaps or suspected bugs: Live Gemini, OpenAI, Ollama, Bandcamp, and Telegram calls were not run during implementation; live runtime confirmation remains for a separate evaluation session.

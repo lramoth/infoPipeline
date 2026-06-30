@@ -250,6 +250,52 @@ class ResearcherTests(unittest.TestCase):
         passed, reason = Researcher.validate(output)
         self.assertTrue(passed, reason)
 
+    def test_bandcamp_uses_configured_discovery_criteria(self):
+        response = {
+            "results": [
+                make_bandcamp_result(
+                    1,
+                    "Dub Signals",
+                    "Filtered",
+                    "https://filtered.bandcamp.com/album/dub-signals?from=discover_page",
+                ),
+                make_bandcamp_result(
+                    2,
+                    "Night Current",
+                    "Signal Phase",
+                    "https://signal-phase.bandcamp.com/album/night-current?from=discover_page",
+                ),
+                make_bandcamp_result(
+                    3,
+                    "Low Ceiling",
+                    "North Loop",
+                    "https://north-loop.bandcamp.com/album/low-ceiling?from=discover_page",
+                ),
+            ]
+        }
+        discovery = {
+            "category_id": 0,
+            "tag_norm_names": ["dub-techno"],
+            "geoname_id": 123,
+            "slice": "top",
+            "time_facet_id": 7,
+            "cursor": "abc",
+            "size": 12,
+            "include_result_types": ["a"],
+        }
+
+        with patch(
+            "researcher_providers.bandcamp.urllib.request.urlopen",
+            return_value=FakeResponse(json.dumps(response).encode("utf-8")),
+        ) as urlopen:
+            output = Researcher(provider="bandcamp", discovery=discovery).run()
+
+        request = urlopen.call_args.args[0]
+        self.assertEqual(json.loads(request.data), discovery)
+        self.assertEqual(output["raw_provider_response"]["request_body"], discovery)
+        passed, reason = Researcher.validate(output)
+        self.assertTrue(passed, reason)
+
     def test_bandcamp_malformed_response_reports_readable_failure(self):
         with patch(
             "researcher_providers.bandcamp.urllib.request.urlopen",

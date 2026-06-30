@@ -42,6 +42,19 @@ MODEL_USING_PROVIDERS = {
 TEMPLATE_USING_PROVIDERS = {
     "writer": {"ollama"},
 }
+DISCOVERY_USING_PROVIDERS = {
+    "researcher": {"bandcamp"},
+}
+BANDCAMP_DISCOVERY_REQUIRED_FIELDS = {
+    "category_id": int,
+    "tag_norm_names": list,
+    "geoname_id": int,
+    "slice": str,
+    "time_facet_id": int,
+    "cursor": str,
+    "size": int,
+    "include_result_types": list,
+}
 
 
 class PipelineConfigError(RuntimeError):
@@ -179,6 +192,18 @@ def _assemble_stage(
 
     constructor_args: dict[str, Any] = {"provider": provider}
 
+    discovery = entry.get("discovery")
+    if discovery is not None:
+        if provider not in DISCOVERY_USING_PROVIDERS.get(name, set()):
+            raise PipelineConfigError(
+                f"Discovery configuration is not supported for stage {name} provider {provider}"
+            )
+        constructor_args["discovery"] = _validate_discovery_config(
+            name,
+            provider,
+            discovery,
+        )
+
     if provider in PROMPT_USING_PROVIDERS.get(name, set()):
         profile_prompt_field, constructor_prompt_field = PROFILE_PATH_FIELDS[name]
         fallback_prompt_path = _required_profile_path(profile, profile_name, profile_prompt_field)
@@ -217,6 +242,51 @@ def _assemble_stage(
         constructor_args["endpoint"] = model["endpoint"]
 
     return STAGE_TYPES[name](**constructor_args)
+
+
+def _validate_discovery_config(
+    stage_name: str,
+    provider: str,
+    discovery: Any,
+) -> dict[str, Any]:
+    if provider == "bandcamp":
+        return _validate_bandcamp_discovery_config(discovery)
+    raise PipelineConfigError(
+        f"Discovery configuration is not supported for stage {stage_name} provider {provider}"
+    )
+
+
+def _validate_bandcamp_discovery_config(discovery: Any) -> dict[str, Any]:
+    if not isinstance(discovery, dict):
+        raise PipelineConfigError("Bandcamp discovery configuration must be an object")
+
+    for field_name, expected_type in BANDCAMP_DISCOVERY_REQUIRED_FIELDS.items():
+        value = discovery.get(field_name)
+        if expected_type is int:
+            if type(value) is not int:
+                raise PipelineConfigError(
+                    f"Bandcamp discovery field {field_name} must be an integer"
+                )
+        elif expected_type is str:
+            if not isinstance(value, str) or not value:
+                raise PipelineConfigError(
+                    f"Bandcamp discovery field {field_name} must be a non-empty string"
+                )
+        elif expected_type is list:
+            if not _is_non_empty_string_list(value):
+                raise PipelineConfigError(
+                    f"Bandcamp discovery field {field_name} must be a non-empty list of strings"
+                )
+
+    return dict(discovery)
+
+
+def _is_non_empty_string_list(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and bool(value)
+        and all(isinstance(item, str) and bool(item) for item in value)
+    )
 
 
 def _required_profile_path(

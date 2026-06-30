@@ -66,6 +66,13 @@ and OpenAI are supported for Researcher and Curator stages; Bandcamp is
 supported for the Researcher stage; Ollama is currently supported for the
 Writer stage.
 
+Source-backed Researcher providers may also accept provider-specific
+`discovery` configuration on the stage. Discovery configuration defines the
+observable candidate collection criteria, while the provider continues to own
+source-specific request execution, normalization, diagnostics, and error
+handling. When a source-backed Researcher stage omits discovery configuration,
+the provider's existing default discovery behavior is used.
+
 Gemini-backed Researcher or Curator stage:
 
 ```yaml
@@ -88,7 +95,26 @@ Bandcamp-backed Researcher stage:
 
 ```yaml
 provider: bandcamp
+discovery:
+  category_id: 0
+  tag_norm_names:
+    - hypnotic-techno
+    - techno
+  geoname_id: 0
+  slice: new
+  time_facet_id: 0
+  cursor: "*"
+  size: 24
+  include_result_types:
+    - a
+    - s
 ```
+
+For Bandcamp discovery, integer fields are `category_id`, `geoname_id`,
+`time_facet_id`, and `size`; string fields are `slice` and `cursor`; list
+fields are `tag_norm_names` and `include_result_types`. The list fields must
+contain non-empty strings. Discovery configuration is rejected for model-backed
+Researcher providers, which continue to use prompts for discovery behavior.
 
 Ollama-backed Writer stage:
 

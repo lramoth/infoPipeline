@@ -29,17 +29,19 @@ class Researcher:
         provider: str = PROVIDER_GEMINI,
         model: str | None = None,
         env_path: str | Path = PROJECT_ENV_PATH,
+        discovery: dict[str, Any] | None = None,
     ) -> None:
         self.provider = provider
         self.model = model if model is not None else _default_model(provider)
         self.endpoint = endpoint.rstrip("/")
         self.env_path = Path(env_path)
         self.prompt_path = Path(prompt_path) if prompt_path is not None else None
+        self.discovery = dict(discovery) if discovery is not None else None
 
     def run(self) -> dict[str, Any]:
         """Search with the configured provider and return normalized research output."""
         if self.provider == PROVIDER_BANDCAMP:
-            return BandcampResearcherProvider().run()
+            return BandcampResearcherProvider(self.discovery).run()
 
         if self.prompt_path is None:
             raise ResearcherError(

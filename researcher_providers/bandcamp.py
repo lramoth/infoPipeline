@@ -29,10 +29,17 @@ RAW_PROVIDER_RESPONSE_LIMIT = 12000
 class BandcampResearcherProvider:
     """Collect new Bandcamp Discover items and normalize them for Researcher."""
 
+    def __init__(self, discovery: dict[str, Any] | None = None) -> None:
+        self.discovery = (
+            dict(discovery)
+            if discovery is not None
+            else dict(BANDCAMP_DISCOVER_PAYLOAD)
+        )
+
     def run(self) -> dict[str, Any]:
         request = urllib.request.Request(
             BANDCAMP_DISCOVER_ENDPOINT,
-            data=json.dumps(BANDCAMP_DISCOVER_PAYLOAD).encode("utf-8"),
+            data=json.dumps(self.discovery).encode("utf-8"),
             headers={
                 "Content-Type": "application/json",
                 "Accept": "application/json",
@@ -69,7 +76,7 @@ class BandcampResearcherProvider:
             "raw_provider_response": {
                 "provider": "Bandcamp",
                 "endpoint_url": request.full_url,
-                "request_body": BANDCAMP_DISCOVER_PAYLOAD,
+                "request_body": self.discovery,
                 "response_preview": bounded_preview(
                     api_response,
                     RAW_PROVIDER_RESPONSE_LIMIT,

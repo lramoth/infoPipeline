@@ -333,6 +333,97 @@ stages:
         self.assertEqual(stages[0].model, "")
         self.assertEqual(stages[0].endpoint, "")
 
+    def test_bandcamp_researcher_receives_configured_discovery(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    provider: bandcamp
+    discovery:
+      category_id: 0
+      tag_norm_names:
+        - dub-techno
+      geoname_id: 123
+      slice: top
+      time_facet_id: 7
+      cursor: abc
+      size: 12
+      include_result_types:
+        - a
+"""
+        )
+
+        stages = load_pipeline()
+
+        self.assertEqual(
+            stages[0].discovery,
+            {
+                "category_id": 0,
+                "tag_norm_names": ["dub-techno"],
+                "geoname_id": 123,
+                "slice": "top",
+                "time_facet_id": 7,
+                "cursor": "abc",
+                "size": 12,
+                "include_result_types": ["a"],
+            },
+        )
+
+    def test_bandcamp_discovery_must_be_complete_and_well_formed(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    provider: bandcamp
+    discovery:
+      category_id: 0
+      tag_norm_names: []
+      geoname_id: 0
+      slice: new
+      time_facet_id: 0
+      cursor: "*"
+      size: 24
+      include_result_types:
+        - a
+"""
+        )
+
+        with self.assertRaisesRegex(PipelineConfigError, "tag_norm_names"):
+            load_pipeline()
+
+    def test_model_backed_researcher_rejects_source_discovery(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    researcher_prompt_path: prompts/researchers/current_brief.md
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    provider: gemini
+    discovery:
+      category_id: 0
+    model:
+      name: gemini-2.5-flash
+      endpoint: https://gemini.example/v1beta/models
+"""
+        )
+
+        with self.assertRaisesRegex(PipelineConfigError, "Discovery configuration"):
+            load_pipeline()
+
     def test_bandcamp_researcher_ignores_unused_prompt_paths(self):
         self.write_config(
             """default_profile: sample
