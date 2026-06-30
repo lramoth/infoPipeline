@@ -793,6 +793,77 @@ class PlannerTests(unittest.TestCase):
         self.assertEqual(stdout.getvalue(), "infoPipeline 0.1.0\n")
         self.assertEqual(stderr.getvalue(), "")
 
+    def test_cli_validate_config_reports_success_for_default_profile(self):
+        stdout = StringIO()
+        stderr = StringIO()
+        with patch("planner.Planner") as planner_class, \
+            patch("planner.resolve_profile_name", return_value="techno-releases") as resolve, \
+            patch("planner.load_pipeline", return_value=[object()]) as load_pipeline, \
+            patch("planner.load_delivery_config", return_value=[]) as load_delivery, \
+            redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(["--validate-config"])
+
+        planner_class.assert_not_called()
+        resolve.assert_called_once_with(None)
+        load_pipeline.assert_called_once_with("techno-releases")
+        load_delivery.assert_called_once_with()
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "SUCCESS")
+        self.assertEqual(payload["profile"], "techno-releases")
+
+    def test_cli_validate_config_validates_selected_profile(self):
+        stdout = StringIO()
+        stderr = StringIO()
+        with patch("planner.Planner") as planner_class, \
+            patch("planner.resolve_profile_name", return_value="finance"), \
+            patch("planner.load_pipeline", return_value=[object()]) as load_pipeline, \
+            patch("planner.load_delivery_config", return_value=[]), \
+            redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(["--validate-config", "--profile", "finance"])
+
+        planner_class.assert_not_called()
+        load_pipeline.assert_called_once_with("finance")
+        self.assertEqual(exit_code, 0)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "SUCCESS")
+        self.assertEqual(payload["profile"], "finance")
+
+    def test_cli_validate_config_reports_failure_with_reason_and_nonzero_exit(self):
+        stdout = StringIO()
+        stderr = StringIO()
+        with patch("planner.Planner") as planner_class, \
+            patch("planner.resolve_profile_name", return_value="finance"), \
+            patch(
+                "planner.load_pipeline",
+                side_effect=RuntimeError("Unknown profile: finance"),
+            ), \
+            patch("planner.load_delivery_config") as load_delivery, \
+            redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(["--validate-config", "--profile", "finance"])
+
+        planner_class.assert_not_called()
+        load_delivery.assert_not_called()
+        self.assertEqual(exit_code, 1)
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(payload["status"], "FAILURE")
+        self.assertIn("Unknown profile: finance", payload["reason"])
+        self.assertEqual(payload["profile"], "finance")
+
+    def test_cli_validate_config_does_not_run_pipeline_or_write_ledger(self):
+        stdout = StringIO()
+        stderr = StringIO()
+        with patch("planner.Planner") as planner_class, \
+            patch("planner.resolve_profile_name", return_value="techno-releases"), \
+            patch("planner.load_pipeline", return_value=[object()]), \
+            patch("planner.load_delivery_config", return_value=[]), \
+            redirect_stdout(stdout), redirect_stderr(stderr):
+            exit_code = main(["--validate-config"])
+
+        self.assertEqual(exit_code, 0)
+        planner_class.assert_not_called()
+        self.assertFalse(self.ledger_path.exists())
+
     def test_cli_keeps_stage_stdout_out_of_final_result_stdout(self):
         stdout = StringIO()
         stderr = StringIO()

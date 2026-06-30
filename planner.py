@@ -389,6 +389,34 @@ def _print_cli_result(payload: dict[str, Any]) -> None:
     print(json.dumps(payload, indent=2))
 
 
+def _validate_config(profile_name: str | None) -> int:
+    """Load and assemble the configured pipeline without running it."""
+    try:
+        resolved_profile_name = resolve_profile_name(profile_name)
+        with redirect_stdout(sys.stderr):
+            load_pipeline(resolved_profile_name)
+            load_delivery_config()
+    except Exception as error:
+        payload: dict[str, Any] = {
+            "status": "FAILURE",
+            "summary": "Configuration validation failed.",
+            "reason": f"{type(error).__name__}: {error}",
+        }
+        if profile_name is not None:
+            payload["profile"] = profile_name
+        _print_cli_result(payload)
+        return 1
+
+    _print_cli_result(
+        {
+            "status": "SUCCESS",
+            "summary": "Configuration is valid.",
+            "profile": resolved_profile_name,
+        }
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the default configured pipeline once from the command line."""
     parser = argparse.ArgumentParser(description="Run the configured infoPipeline once.")
@@ -396,6 +424,13 @@ def main(argv: list[str] | None = None) -> int:
         "--version",
         action="store_true",
         help="Report the application version and exit.",
+    )
+    parser.add_argument(
+        "--validate-config",
+        dest="validate_config",
+        action="store_true",
+        help="Load and assemble the configured pipeline, report whether it is "
+        "valid, and exit without running the pipeline.",
     )
     parser.add_argument(
         "--profile",
@@ -406,6 +441,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.version:
         print(f"infoPipeline {APP_VERSION}")
         return 0
+
+    if args.validate_config:
+        return _validate_config(args.profile_name)
 
     try:
         planner = Planner(profile_name=args.profile_name)
