@@ -28,6 +28,24 @@ During autonomous feature development, the Planner agent uses these artifacts to
 
 The Director accepts or rejects the completed feature. Specifications, evaluations, and governance findings serve as supporting evidence for that decision.
 
+### Director Intent
+
+The Director may specify intended aspects of the externally observable behavior or public interface for a feature.
+
+Examples include configuration contracts, command-line interfaces,
+compatibility requirements, public artifacts, and user-facing workflows.
+
+Director Intent guides architectural direction but must not prescribe
+implementation details.
+
+The Planner agent retains responsibility for determining how Director Intent is
+realized within the project's architectural and governance constraints.
+
+If the Planner agent determines that Director Intent conflicts with governance
+principles or the existing architecture, it should surface the conflict for
+Director review rather than silently replacing the intended behavior with an
+alternative design.
+
 ### Specification Boundary
 Specifications describe observable behavior.
 Specifications must not prescribe:

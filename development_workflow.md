@@ -73,6 +73,10 @@ Initial structure:
 
 Send the Writer output to Telegram after a successful pipeline run.
 
+## Director Intent (optional)
+
+Describe any required public interface or externally observable contract.
+
 ## Initial Architectural Review
 
 ## Tasks
@@ -83,6 +87,31 @@ Send the Writer output to Telegram after a successful pipeline run.
 
 ## Final Summary
 ```
+
+The Director may optionally include a **Director Intent** section in the Work
+File.
+
+Director Intent records any intended externally observable behavior or public interface that is important to the desired feature.
+
+Examples include:
+
+- configuration contracts
+- command-line interfaces
+- user-facing workflows
+- compatibility requirements
+- public artifacts
+
+Director Intent must not prescribe implementation details such as algorithms,
+internal data structures, helper functions, class names, or file organization.
+
+The Planner agent should preserve Director Intent unless it identifies a
+governance or architectural conflict requiring Director review.
+
+The Planner agent may refine implementation approach, task decomposition,
+and architectural realization provided the resulting feature remains
+consistent with the Director Intent.
+
+Director Intent supplements the feature Goal rather than replacing it.
 
 ------------------------------------------------------------------------
 
@@ -102,6 +131,7 @@ The Planner agent initializes the Work File using the project's standard structu
 The standard top-level sections are:
 
 - Goal
+- Director Intent (optional)
 - Initial Architectural Review
 - Tasks
 - Recommended Future Work Files
