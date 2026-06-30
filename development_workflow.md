@@ -134,6 +134,13 @@ The Planner agent should determine whether the feature Goal and Director
 Intent completely describe the observable behavioral contract of the
 completed feature.
 
+The Planner agent should also identify observable behavior that is implied by
+the feature Goal or Director Intent, even when that behavior is not explicitly
+spelled out. If implied behavior is necessary for the completed feature to
+satisfy its stated purpose, the Planner agent should record current-scope work
+for that behavior rather than leaving it for an implementation subagent to
+exclude.
+
 When implementation would introduce observable behavior that is necessary to
 fully define the completed feature but is not described by the feature Goal
 or Director Intent, the Planner agent should create current-scope work to
@@ -192,6 +199,11 @@ The Planner agent:
 - records recommended future Work Files
 - initiates Governance Review
 - ensures completed features have a complete observable behavioral contract
+
+The Planner agent owns task scope during the autonomous workflow. An
+implementation-authored specification, implementation observation, or
+subagent recommendation may inform scope decisions, but it does not define the
+feature boundary by itself.
 
 The Planner agent never edits implementation code.
 
@@ -334,6 +346,24 @@ If implementation observations or recommendations identify potential current-sco
   task to complete it.
 - Otherwise, determine whether the recommendation should be recorded as a
   future Work File or rejected.
+
+If an implementation subagent excludes behavior from its specification or
+describes behavior as out of scope:
+
+- Compare that exclusion against the Work File Goal, Director Intent, Initial
+  Architectural Review, and governance principles.
+- Determine whether the excluded behavior materially affects the completed
+  feature's stated purpose or observable behavioral contract.
+- If it does, create a current-scope task, update the Work File, and continue
+  the workflow.
+- If it does not, record the Planner decision to accept the exclusion, record
+  it as a future Work File, or reject it.
+
+The absence of a requirement from an implementation-authored specification
+does not by itself make the behavior out of scope. The Planner agent may
+create current-scope tasks for behavior implied by the Work File Goal,
+Director Intent, or Initial Architectural Review, including behavior discovered
+during implementation or evaluation.
 
 If implementation observations identify work outside the scope of the current feature:
 

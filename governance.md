@@ -26,6 +26,12 @@ Agent-generated specifications and evaluations are allowed and encouraged.
 
 During autonomous feature development, the Planner agent uses these artifacts to coordinate implementation, evaluation, and governance.
 
+The Planner agent owns workflow scope decisions during autonomous feature
+development. Agent-authored specifications, evaluations, and implementation
+observations are advisory artifacts; they do not narrow the Director's intent
+or the Work File goal unless the Planner records that scope decision in the
+Work File.
+
 The Director accepts or rejects the completed feature. Specifications, evaluations, and governance findings serve as supporting evidence for that decision.
 
 ### Director Intent
