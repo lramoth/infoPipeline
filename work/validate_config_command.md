@@ -48,7 +48,7 @@ Use those documents to guide all workflow decisions while executing this Work Fi
 ## Tasks
 
 - Task 1: Add configuration validation command-line behavior.
-  - Status: Implementation complete; evaluation pending
+  - Status: Complete
   - Scope: Define and implement observable `--validate-config` behavior for the
     command-line entry point — load and assemble the configured pipeline for the
     selected (or default) profile, report success or failure to the caller with
@@ -90,6 +90,25 @@ Use those documents to guide all workflow decisions while executing this Work Fi
           no-live-calls scope. An optional deeper credential/reachability
           preflight would contradict the current no-live-calls requirement and
           is left to Director discretion rather than recorded as required work.
+    - Eval: `evals/validate_config_command_feature.eval.md`
+    - Evaluation authoring commit: `b68563501752b6aa1ea1b4fae9769113f568b9e3`
+    - Evaluation commit: `29de248f9d4697c782a26f6694ace2cb9c7f2f98`
+    - Result: PASS
+    - Evaluation observations:
+      - All six scenarios passed. Validating the default profile (no `--profile`)
+        and a named loadable profile each reported success and exited 0;
+        validating an unknown profile reported a readable failure reason and
+        exited non-zero, with reported outcome and exit status agreeing in both
+        directions. Standard output remained the single parseable result surface.
+      - Validation succeeded with network connections fully blocked, confirming
+        no provider or network calls and no credential dependency. No ledger was
+        created or modified, no output files were written, and no delivery was
+        attempted. Existing `--version`, profile-selection, and normal-run
+        behavior remained unchanged (full suite: 156 tests passing).
+      - The evaluator noted that a failure reason surfaces an internal
+        error-type label within the readable result text; the specification
+        requires only a readable reason, which is present, so this is observable
+        output rather than a defect and did not raise a warning.
 
 ---
 
