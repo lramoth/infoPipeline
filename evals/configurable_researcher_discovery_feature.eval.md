@@ -135,6 +135,27 @@ Then:
 - No ledger is created, overwritten, or updated for a pipeline run.
 - No delivery message is produced or sent.
 
+## Scenario 5A: Unsupported Bandcamp Discovery Keys Are Rejected Before Stages Run
+
+Given:
+- A Bandcamp Researcher stage declares discovery criteria that include every
+  documented Bandcamp discovery field with valid values.
+- The same discovery criteria also include an unsupported field that is not part
+  of the documented Bandcamp discovery contract.
+- Controlled stages and provider endpoints are observable.
+
+When:
+- The selected pipeline configuration is loaded or validated.
+
+Then:
+- Configuration loading fails before any Researcher, Curator, Writer, or
+  Delivery behavior starts.
+- The failure reason is readable to a configuration author and identifies that
+  unsupported Bandcamp discovery criteria are not accepted.
+- No provider endpoint is contacted.
+- No ledger is created, overwritten, or updated for a pipeline run.
+- No delivery message is produced or sent.
+
 ## Scenario 6: Discovery On Model-Backed Researcher Is Rejected
 
 Given:

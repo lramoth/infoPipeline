@@ -401,6 +401,38 @@ stages:
         with self.assertRaisesRegex(PipelineConfigError, "tag_norm_names"):
             load_pipeline()
 
+    def test_bandcamp_discovery_rejects_unsupported_fields(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    provider: bandcamp
+    discovery:
+      category_id: 0
+      tag_norm_names:
+        - dub-techno
+      geoname_id: 123
+      slice: top
+      time_facet_id: 7
+      cursor: abc
+      size: 12
+      include_result_types:
+        - a
+      undocumented_filter: noisy
+"""
+        )
+
+        with self.assertRaisesRegex(
+            PipelineConfigError,
+            "unsupported fields: undocumented_filter",
+        ):
+            load_pipeline()
+
     def test_model_backed_researcher_rejects_source_discovery(self):
         self.write_config(
             """default_profile: sample

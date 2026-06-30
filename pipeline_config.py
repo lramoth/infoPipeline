@@ -260,6 +260,15 @@ def _validate_bandcamp_discovery_config(discovery: Any) -> dict[str, Any]:
     if not isinstance(discovery, dict):
         raise PipelineConfigError("Bandcamp discovery configuration must be an object")
 
+    unsupported_fields = sorted(
+        set(discovery) - set(BANDCAMP_DISCOVERY_REQUIRED_FIELDS)
+    )
+    if unsupported_fields:
+        joined_fields = ", ".join(unsupported_fields)
+        raise PipelineConfigError(
+            f"Bandcamp discovery configuration has unsupported fields: {joined_fields}"
+        )
+
     for field_name, expected_type in BANDCAMP_DISCOVERY_REQUIRED_FIELDS.items():
         value = discovery.get(field_name)
         if expected_type is int:

@@ -30,6 +30,9 @@ provider.
   configuration, ledger behavior, or output validation rules.
 - Configuration validation shall reject malformed discovery criteria with a
   readable error before a pipeline run starts.
+- Bandcamp discovery configuration shall accept only the documented Bandcamp
+  Discover criteria fields and shall reject unsupported fields with a readable
+  error before a pipeline run starts.
 - Source-backed Researcher providers shall continue to return the existing
   Researcher output contract: an item list whose items can be validated for
   title, URL, and summary.
@@ -41,7 +44,7 @@ provider.
 ## Inputs
 
 For the Bandcamp Researcher provider, the optional stage-level `discovery`
-configuration may provide the following Bandcamp Discover criteria:
+configuration may provide only the following Bandcamp Discover criteria:
 
 ```yaml
 stages:
@@ -103,6 +106,8 @@ When present:
 
 - Missing or malformed discovery criteria fields fail configuration loading
   with a readable error before any provider is called.
+- Unsupported Bandcamp discovery criteria fields fail configuration loading
+  with a readable error before any provider is called.
 - Discovery criteria on a model-backed Researcher provider fail configuration
   loading with a readable error.
 - Bandcamp network failures and malformed Bandcamp responses continue to fail
@@ -118,6 +123,8 @@ When present:
 - [ ] Bandcamp Researcher preserves the previous default request behavior when
       discovery criteria are omitted.
 - [ ] Invalid discovery criteria are rejected during configuration loading.
+- [ ] Unsupported Bandcamp discovery criteria fields are rejected during
+      configuration loading.
 - [ ] Model-backed Researcher providers continue to use prompts and reject
       source discovery criteria.
 - [ ] Existing Researcher, Curator, Writer, Delivery, profile, prompt,
@@ -139,6 +146,8 @@ When present:
 
 - Discovery criteria with wrong field types or missing required fields are
   rejected before stages execute.
+- Bandcamp discovery criteria with unsupported fields are rejected before
+  stages execute.
 - Discovery criteria declared for a model-backed Researcher provider are
   rejected before stages execute.
 

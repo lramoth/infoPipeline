@@ -765,3 +765,10 @@
 - Scenario 10, Bandcamp Source Failures Remain Readable And Halt The Pipeline: PASS — controlled Bandcamp malformed-response and too-few-item cases fail at Researcher with readable reasons, prevent later pipeline progress, and expose no observed API keys, authentication headers, tokens, chat IDs, or environment values.
 - Scenario 11, Automated Tests Avoid Live External Calls: PASS — the focused and full automated checks cover configured discovery, default discovery, invalid discovery, model-backed rejection, prompt-backed research, and downstream stability using controlled inputs with no live external calls required.
 - Overall verdict: PASS.
+
+## Build log — 2026-06-30
+
+- Spec used: `specs/configurable_researcher_discovery_feature.md`.
+- Summary of work completed: Bandcamp discovery configuration now accepts only the documented discovery criteria fields and rejects unsupported fields during configuration loading before a pipeline run starts. The behavioral specification, evaluation coverage, and architecture documentation now state that the Bandcamp discovery contract is limited to the documented fields.
+- Assumptions made: The existing Bandcamp discovery field list remains the complete public contract for configured Bandcamp discovery criteria. No new dependencies were added.
+- Gaps or suspected bugs: Live Gemini, OpenAI, Ollama, Bandcamp, and Telegram calls were not run during implementation; this task only required pre-run configuration validation and controlled local tests.

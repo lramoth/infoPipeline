@@ -113,7 +113,8 @@ discovery:
 For Bandcamp discovery, integer fields are `category_id`, `geoname_id`,
 `time_facet_id`, and `size`; string fields are `slice` and `cursor`; list
 fields are `tag_norm_names` and `include_result_types`. The list fields must
-contain non-empty strings. Discovery configuration is rejected for model-backed
+contain non-empty strings. Bandcamp discovery configuration accepts only these
+documented fields. Discovery configuration is rejected for model-backed
 Researcher providers, which continue to use prompts for discovery behavior.
 
 Ollama-backed Writer stage:
