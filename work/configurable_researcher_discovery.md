@@ -112,7 +112,12 @@ behavior, durable documentation updates are current-scope work under
           `techno-releases`.
     - Implementation Commit: `773d82c28aa42e5e00f677b5ea746c302bf2c0d8`
     - Eval: `evals/configurable_researcher_discovery_feature.eval.md`
-    - Status: Implemented; awaiting evaluation execution.
+    - Result: PASS
+    - Evaluation Summary: The updated evaluation passed all scenarios,
+      including unsupported Bandcamp discovery key rejection, using controlled
+      local checks with no live external calls.
+    - Evaluation Commit: `cd0353569439c6a9829ee6f6f4ca9678de96275b`
+    - Status: Complete.
 
 ---
 
