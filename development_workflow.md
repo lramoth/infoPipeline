@@ -187,7 +187,7 @@ The Planner agent:
 - collects artifacts
 - records results
 - maintains the Work File
-- reviews implementation recommendations
+- evaluates implementation observations and recommendations
 - creates new tasks
 - records recommended future Work Files
 - initiates Governance Review
@@ -221,16 +221,16 @@ The implementation subagent:
 2. implements the specification
 3. records an implementation summary
 4. records implementation observations
-5. recommends additional tasks required to complete the feature
-6. recommends future Work Files for work outside the current feature
+5. recommends potential current-scope work
+6. recommends potential future Work Files
 
 The implementation subagent returns:
 
 - specification filename
 - implementation summary
 - implementation observations
-- recommended new tasks
-- recommended future Work Files
+- current-scope recommendations
+- future Work File recommendations
 
 Before terminating, the implementation subagent commits the specification, implementation changes, and any implementation artifacts it produced to the active feature branch.
 
@@ -325,11 +325,15 @@ If the evaluation fails:
 - The Planner agent spawns a fresh implementation subagent for the new iteration.
 - The task loop repeats.
 
-If implementation observations identify additional required work or reveal
-previously unspecified observable behavior:
+If implementation observations or recommendations identify potential current-scope work:
 
 - Review each recommendation.
-- Create a new task for each accepted recommendation.
+- Determine whether the completed feature would have a complete observable
+  behavioral contract without the recommended work.
+- If the behavioral contract would be incomplete, create a new current-scope
+  task to complete it.
+- Otherwise, determine whether the recommendation should be recorded as a
+  future Work File or rejected.
 
 If implementation observations identify work outside the scope of the current feature:
 
