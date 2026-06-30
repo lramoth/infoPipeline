@@ -81,7 +81,13 @@ behavior, durable documentation updates are current-scope work under
     - Implementation Commit: `430030e16162cd9997090f77e24687cad5b96725`
     - Eval: `evals/configurable_researcher_discovery_feature.eval.md`
     - Evaluation Authoring Commit: `19145628886f308287c6dd3d14c76b2933896d6c`
-    - Status: Implemented; awaiting evaluation execution.
+    - Result: PASS
+    - Evaluation Summary: All 11 evaluation scenarios passed using controlled
+      local tests and configuration validation. The evaluation made no live
+      Gemini, OpenAI, Ollama, Bandcamp, Telegram, web search, or other external
+      calls.
+    - Evaluation Commit: `7ceec18e2e1869b09af7c5a81e58a17bd5187e80`
+    - Status: Complete.
 
 ---
 
