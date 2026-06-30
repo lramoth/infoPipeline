@@ -772,3 +772,20 @@
 - Summary of work completed: Bandcamp discovery configuration now accepts only the documented discovery criteria fields and rejects unsupported fields during configuration loading before a pipeline run starts. The behavioral specification, evaluation coverage, and architecture documentation now state that the Bandcamp discovery contract is limited to the documented fields.
 - Assumptions made: The existing Bandcamp discovery field list remains the complete public contract for configured Bandcamp discovery criteria. No new dependencies were added.
 - Gaps or suspected bugs: Live Gemini, OpenAI, Ollama, Bandcamp, and Telegram calls were not run during implementation; this task only required pre-run configuration validation and controlled local tests.
+
+## Evaluation — 2026-06-30
+
+- Eval file used: `evals/configurable_researcher_discovery_feature.eval.md`.
+- Scenario 1, Configured Bandcamp Discovery Loads And Runs: PASS — valid Bandcamp discovery criteria load successfully, controlled collection returns at least three complete normalized items, and the output is accepted for continuation.
+- Scenario 2, Configured Criteria Are Sent To Bandcamp Discover: PASS — the controlled Bandcamp endpoint observes the configured category, tags, geography, slice, time facet, cursor, result size, and included result types rather than the previous default criteria.
+- Scenario 3, Omitted Discovery Uses Previous Default Behavior: PASS — omitting discovery criteria still loads successfully, sends the previous default Bandcamp criteria, and returns complete normalized items.
+- Scenario 4, Source Context Includes Bounded Discovery Criteria: PASS — successful Bandcamp output exposes readable bounded source context containing the sent discovery criteria without exposing observed secrets or environment values.
+- Scenario 5, Malformed Bandcamp Discovery Is Rejected Before Stages Run: PASS — malformed Bandcamp discovery values are rejected during configuration loading with a readable reason before provider contact, stage execution, ledger mutation, or delivery.
+- Scenario 5A, Unsupported Bandcamp Discovery Keys Are Rejected Before Stages Run: PASS — a Bandcamp discovery block containing an unsupported field is rejected during configuration loading with a readable unsupported-criteria reason before provider contact, stage execution, ledger mutation, or delivery.
+- Scenario 6, Discovery On Model-Backed Researcher Is Rejected: PASS — model-backed Researcher configuration that declares source discovery criteria fails validation before stages run, with a readable reason indicating discovery criteria are invalid for that provider.
+- Scenario 7, Model-Backed Researcher Prompt Behavior Remains Unchanged: PASS — controlled model-backed Researcher checks continue to use configured prompt behavior and produce normalized items without requiring or sending Bandcamp discovery criteria.
+- Scenario 8, Non-Researcher Behavior Remains Unchanged: PASS — controlled checks show Bandcamp discovery criteria affect candidate collection only while Curator, Writer, Delivery, profile selection, prompts, templates, models, ledgers, and validation behavior remain governed by their existing configuration.
+- Scenario 9, Checked-In Default Configuration Is Loadable: PASS — validating the checked-in default configuration reports machine-parseable success for the selected profile, exits with status 0, and does not run pipeline stages or delivery.
+- Scenario 10, Bandcamp Source Failures Remain Readable And Halt The Pipeline: PASS — controlled Bandcamp malformed-response and insufficient-item cases fail at Researcher with readable reasons, prevent later pipeline progress, and expose no observed secrets.
+- Scenario 11, Automated Tests Avoid Live External Calls: PASS — focused and full automated checks cover configured discovery, default discovery, malformed discovery, unsupported keys, model-backed rejection, prompt-backed research, and downstream stability using controlled inputs without live external calls.
+- Overall verdict: PASS.
