@@ -48,13 +48,48 @@ Use those documents to guide all workflow decisions while executing this Work Fi
 ## Tasks
 
 - Task 1: Add configuration validation command-line behavior.
-  - Status: Pending
+  - Status: Implementation complete; evaluation pending
   - Scope: Define and implement observable `--validate-config` behavior for the
     command-line entry point — load and assemble the configured pipeline for the
     selected (or default) profile, report success or failure to the caller with
     an agreeing exit status, and do so without running the pipeline, calling
     providers, writing a ledger, or attempting delivery. Then evaluate it
     independently from live provider calls.
+  - Iteration 1
+    - Spec: `specs/validate_config_command_feature.md`
+    - Implementation commit: `663f57c2ca48ddc791c7a9fe969f5a42319c8434`
+    - Summary: `--validate-config` loads and assembles the configured pipeline
+      for the resolved profile and reports the result to standard output without
+      running the pipeline, calling any provider, writing a ledger, or attempting
+      delivery. With no profile selected it validates the configured default
+      profile; with `--profile` it validates that profile. Success prints a
+      readable result identifying the validated profile and exits 0; failure
+      prints a readable result with a reason (and the selected profile when
+      known) and exits non-zero. Reported outcome and exit status always agree.
+      Incidental load-path output is routed to standard error so standard output
+      remains the machine-readable result surface. Existing `--version`, profile
+      selection, and normal-run behavior are unchanged.
+    - Implementation observations:
+      - Success/failure results reuse the established JSON command-result shape
+        (`status`/`summary`/`reason`/`profile`); the spec requires readable,
+        parseable reporting and does not prescribe field names.
+        - Planner Agent Decision: Accept; reusing the existing result surface is
+          consistent with the architecture's command-line result contract and
+          keeps the command-line surface uniform.
+      - Validation also exercises delivery configuration, so an
+        enabled-but-misconfigured delivery provider is reported as a
+        configuration failure — a slightly broader notion of "configured
+        pipeline" than stages alone.
+        - Planner Agent Decision: Accept; delivery is part of the assembled
+          pipeline per the architecture, so validating its configuration is in
+          scope and desirable. Recorded for the evaluator's awareness.
+      - Configuration loadability does not verify provider credentials or network
+        reachability, so a valid result does not guarantee runtime provider
+        success.
+        - Planner Agent Decision: Accept; this is consistent with the stated
+          no-live-calls scope. An optional deeper credential/reachability
+          preflight would contradict the current no-live-calls requirement and
+          is left to Director discretion rather than recorded as required work.
 
 ---
 
