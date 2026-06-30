@@ -73,9 +73,12 @@ When proposing or implementing changes, agents should consider:
     Does the solution align with the existing project architecture and direction?
 
 ## Architectural Evolution
+
 Implementation may reveal architectural improvements that were not
 anticipated when the feature was proposed.
+
 Agents are encouraged to surface these improvements.
+
 The Planner agent may incorporate improvements into the current feature when
 they are necessary to satisfy governance or complete the intended
 behavior.
@@ -83,14 +86,20 @@ behavior.
 When a feature changes how the application functions, the Planner agent has
 authority to create current-scope tasks to update durable project documents
 that describe that behavior. This includes documented configuration contracts,
-runtime behavior, stage responsibilities, provider responsibilities, command-line
-behavior, external dependencies, and artifact or ledger behavior.
+runtime behavior, stage responsibilities, provider responsibilities,
+command-line behavior, external dependencies, and artifact or ledger behavior.
 
 Documentation updates are current-scope when stale or missing documentation
 would make the completed behavior harder to understand, operate, evaluate, or
 govern. They should be recorded as future Work Files only when they describe
 follow-on improvements rather than the behavior completed by the current
 feature.
+
+Configuration contracts are part of the application's observable behavior.
+Features that introduce or modify configuration should ensure the documented
+configuration contract and the application's configuration validation behavior
+remain consistent so unsupported or undocumented configuration is rejected
+before runtime whenever practical.
 
 ## Approval Semantics
 During autonomous feature development, specifications and evaluations are workflow artifacts produced by agents.
