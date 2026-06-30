@@ -50,11 +50,44 @@ behavior, durable documentation updates are current-scope work under
       existing default behavior when no discovery configuration is supplied,
       keep provider/source responsibilities separated, update applicable
       documentation, and append the required build log entry.
-    - Status: Pending
+    - Spec: `specs/configurable_researcher_discovery_feature.md`
+    - Implementation Summary: Source-backed Bandcamp Researcher discovery can
+      now be supplied through optional stage-level configuration and is
+      validated before pipeline runs. When no discovery configuration is
+      supplied, the prior default Bandcamp discovery behavior remains
+      available. Model-backed Researcher providers continue to use prompts, and
+      documentation now describes the completed configuration behavior.
+    - Implementation Observations:
+        - Bandcamp is currently the only source-backed Researcher provider, so
+          the implemented discovery contract is scoped to Bandcamp.
+        - Discovery configuration is rejected for model-backed Researcher
+          providers, which continue to use prompts.
+    - Planner Agent Decisions:
+        - Author and run an evaluation for
+          `specs/configurable_researcher_discovery_feature.md` as the normal
+          next workflow step.
+        - Record generalized source-backed discovery contracts for future
+          consideration if additional source-backed Researcher providers are
+          added.
+        - Record optional live-provider confirmation for configured Bandcamp
+          discovery as future work rather than current scope because the spec
+          explicitly excludes live provider evaluation.
+    - Tests Run:
+        - `python3 -m unittest tests.test_researcher tests.test_pipeline_config`
+          — PASS, 61 tests.
+        - `python3 -m unittest discover -s tests -t .` — PASS, 160 tests.
+        - `python3 planner.py --validate-config` — PASS for
+          `techno-releases`.
+    - Implementation Commit: `430030e16162cd9997090f77e24687cad5b96725`
+    - Status: Implemented; awaiting evaluation.
 
 ---
 
 ## Recommended Future Work Files
+
+- Generalized source-backed Researcher discovery contracts for future
+  source-backed providers.
+- Optional live-provider confirmation for configured Bandcamp discovery.
 
 ---
 
