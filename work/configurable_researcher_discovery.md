@@ -89,6 +89,14 @@ behavior, durable documentation updates are current-scope work under
     - Evaluation Commit: `7ceec18e2e1869b09af7c5a81e58a17bd5187e80`
     - Status: Complete.
 
+- Task 2: Reject unsupported Bandcamp discovery keys
+    - Origin: Governance Review warning.
+    - Scope: Ensure Bandcamp discovery configuration accepts only the
+      documented discovery contract, rejects unknown keys before a pipeline run,
+      updates the behavioral specification and evaluation coverage as needed,
+      and appends the required build log entry.
+    - Status: Pending
+
 ---
 
 ## Recommended Future Work Files
@@ -100,6 +108,19 @@ behavior, durable documentation updates are current-scope work under
 ---
 
 ## Governance
+
+- Result: PASS WITH WARNINGS
+- Findings:
+    - The feature fits the project architecture: configuration owns discovery
+      criteria, Bandcamp owns source interaction and normalization,
+      model-backed Researcher providers continue to use prompts, and Curator,
+      Writer, and Delivery responsibilities are unchanged.
+    - Durable docs, build logs, and evaluation logs are present.
+    - Warning: Bandcamp discovery validation checks required documented fields
+      but does not reject undocumented extra keys, leaving an undocumented
+      configuration surface outside the described contract.
+- Planner Agent Decision: Create Task 2 to reject unsupported Bandcamp
+  discovery keys and keep the configuration contract narrow and durable.
 
 ---
 
