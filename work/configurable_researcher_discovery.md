@@ -79,7 +79,9 @@ behavior, durable documentation updates are current-scope work under
         - `python3 planner.py --validate-config` — PASS for
           `techno-releases`.
     - Implementation Commit: `430030e16162cd9997090f77e24687cad5b96725`
-    - Status: Implemented; awaiting evaluation.
+    - Eval: `evals/configurable_researcher_discovery_feature.eval.md`
+    - Evaluation Authoring Commit: `19145628886f308287c6dd3d14c76b2933896d6c`
+    - Status: Implemented; awaiting evaluation execution.
 
 ---
 
