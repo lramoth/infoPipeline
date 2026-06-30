@@ -95,7 +95,24 @@ behavior, durable documentation updates are current-scope work under
       documented discovery contract, rejects unknown keys before a pipeline run,
       updates the behavioral specification and evaluation coverage as needed,
       and appends the required build log entry.
-    - Status: Pending
+    - Spec: `specs/configurable_researcher_discovery_feature.md`
+    - Implementation Summary: Bandcamp discovery configuration now accepts only
+      the documented discovery criteria fields and rejects unsupported fields
+      during configuration loading before a pipeline run starts. Valid
+      documented discovery configuration and omitted-discovery default behavior
+      remain unchanged.
+    - Implementation Observations:
+        - The rejection is scoped to Bandcamp discovery keys only.
+        - No additional current-scope implementation tasks were recommended.
+    - Tests Run:
+        - `python3 -m unittest tests.test_pipeline_config tests.test_researcher`
+          — PASS, 62 tests.
+        - `python3 -m unittest discover -s tests -t .` — PASS, 161 tests.
+        - `python3 planner.py --validate-config` — PASS for
+          `techno-releases`.
+    - Implementation Commit: `773d82c28aa42e5e00f677b5ea746c302bf2c0d8`
+    - Eval: `evals/configurable_researcher_discovery_feature.eval.md`
+    - Status: Implemented; awaiting evaluation execution.
 
 ---
 
