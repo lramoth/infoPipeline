@@ -126,6 +126,20 @@ The Planner agent reads:
 
 The Planner agent performs an initial architectural review.
 
+The architectural review should identify architectural implications,
+observable behaviors, and configuration or interface changes introduced by
+the feature.
+
+The Planner agent should determine whether the feature Goal and Director
+Intent completely describe the observable behavioral contract of the
+completed feature.
+
+When implementation would introduce observable behavior that is necessary to
+fully define the completed feature but is not described by the feature Goal
+or Director Intent, the Planner agent should create current-scope work to
+complete the behavioral contract unless doing so would materially expand the
+intended feature.
+
 The Planner agent initializes the Work File using the project's standard structure.
 
 The standard top-level sections are:
@@ -177,6 +191,7 @@ The Planner agent:
 - creates new tasks
 - records recommended future Work Files
 - initiates Governance Review
+- ensures completed features have a complete observable behavioral contract
 
 The Planner agent never edits implementation code.
 
@@ -310,7 +325,8 @@ If the evaluation fails:
 - The Planner agent spawns a fresh implementation subagent for the new iteration.
 - The task loop repeats.
 
-If implementation observations identify additional required work:
+If implementation observations identify additional required work or reveal
+previously unspecified observable behavior:
 
 - Review each recommendation.
 - Create a new task for each accepted recommendation.
