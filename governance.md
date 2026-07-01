@@ -1,146 +1,254 @@
-# Governance Notes
-This project is intentionally developed through:
-- behavioral specifications
-- implementation by coding agents
-- evaluation against specifications
+# Governance
 
-## Principles
-- Specs describe observable behavior, not implementation.
-- Evals test both success and failure conditions.
-- Code is treated as a black box whenever possible.
-- Runtime observations should inform future work.
-- Durable project documents should reflect implemented application behavior.
-- Build logs describe capabilities, not implementation details.
-- Dependencies are allowed when they avoid reimplementing established functionality.
-- Human review and acceptance are required for all features.
+## Purpose
 
-## Governance Model
-The human acts as Director rather than primary implementer.
-Agents may propose specifications, implementations, evaluations, and improvements. These proposals are advisory until reviewed and accepted by the Director.
-The Director is responsible for:
-- defining the problem or desired outcome
-- establishing project governance
-- selecting between competing solutions
-- accepting or rejecting completed work
-Agent-generated specifications and evaluations are allowed and encouraged.
+Governance keeps autonomous development aligned with project intent. It is not
+ceremony for its own sake. It exists to protect correctness, architectural
+coherence, independent verification, and useful durable memory.
 
-During autonomous feature development, the Planner agent uses these artifacts to coordinate implementation, evaluation, and governance.
+The goal is confidence that accepted behavior matches the Director's intent.
 
-The Planner agent owns workflow scope decisions during autonomous feature
-development. Agent-authored specifications, evaluations, and implementation
-observations are advisory artifacts; they do not narrow the Director's intent
-or the Work File goal unless the Planner records that scope decision in the
-Work File.
+## Authority
 
-The Director accepts or rejects the completed feature. Specifications, evaluations, and governance findings serve as supporting evidence for that decision.
+The Director defines goals and accepts or rejects completed work.
 
-### Director Intent
+Agents may propose behavior contracts, implementations, evaluations, and
+future work. Those proposals are advisory until the Planner records a scope
+decision and the Director accepts the completed result.
 
-The Director may specify intended aspects of the externally observable behavior or public interface for a feature.
+The Planner owns workflow scope during autonomous development. Implementation
+observations, tests, specifications, and evaluations inform Planner decisions
+but do not independently narrow the Goal or Director Intent.
 
-Examples include configuration contracts, command-line interfaces,
-compatibility requirements, public artifacts, and user-facing workflows.
+## Canonical Sources
 
-Director Intent guides architectural direction but must not prescribe
-implementation details.
+For active work:
 
-The Planner agent retains responsibility for determining how Director Intent is
-realized within the project's architectural and governance constraints.
+- the Work File is the canonical workflow memory;
+- the Behavior Contract is the canonical feature requirement;
+- `architecture.md` is the canonical product architecture and public contract
+  map;
+- `eval_log.md` is append-only historical evidence;
+- source code and tests are the canonical implementation state.
 
-If the Planner agent determines that Director Intent conflicts with governance
-principles or the existing architecture, it should surface the conflict for
-Director review rather than silently replacing the intended behavior with an
-alternative design.
+If two artifacts duplicate the same requirement, the Planner should identify
+which one is canonical and remove or stop extending the duplicate in future
+work.
 
-### Specification Boundary
-Specifications describe observable behavior.
-Specifications must not prescribe:
-- file names
-- class names
-- function names
-- data structures
-- implementation algorithms
-- library choices
-unless those details are themselves observable requirements.
-Implementation decisions belong to design discussions, code reviews,
-or implementation plans, not behavioral specifications.
+## Behavioral Discipline
 
-## Separation of Responsibilities
-Whenever practical, implementation, evaluation, and governance review should be performed by different actors.
-During autonomous feature development, specification authoring and implementation for an individual task may be performed by the same implementation subagent.
-Separation of responsibilities reduces self-validation and increases
-confidence in accepted behavior.
+Requirements, evaluations, build logs, and governance findings should describe
+observable behavior.
 
-### Agent Expectations
-Before beginning work, agents should review this document.
-Agents should ensure that their work remains consistent with these
-governance principles throughout implementation.
-If a proposed specification, implementation, evaluation, or architectural
-change conflicts with these principles, the conflict should be surfaced
-before continuing.
+Observable behavior includes:
 
-## Architectural Principles
-When proposing or implementing changes, agents should consider:
-- Modularity
-    Can the capability be added, removed, or replaced without affecting unrelated components?
-- Configurability
-    Should important runtime behavior be configurable rather than hardcoded?
-- Scalability
-    Does this design make the next similar implementation easier?
-- Complexity Control
-    Does this reduce overall system complexity rather than increase it?
-- Separation of Responsibilities
-    Does each component own a single, well-defined responsibility?
-- Observable Behavior
-    Can the resulting behavior be evaluated without knowledge of the implementation?
-- Project Fit
-    Does the solution align with the existing project architecture and direction?
+- command-line inputs and outputs;
+- configuration acceptance and rejection;
+- stage outputs and validation outcomes;
+- ledger and diagnostic artifacts;
+- provider requests and external side effects;
+- delivery outcomes;
+- user-visible failure reasons;
+- documented operational contracts.
+
+Internal implementation details should not appear in behavior contracts unless
+they are themselves part of a public interface.
+
+## Architecture Principles
+
+Review changes against these principles:
+
+- **Modularity**: The capability can change without unnecessary effects on
+  unrelated components.
+- **Separation of Responsibilities**: Each stage owns a clear job. Planner
+  coordinates, Researcher collects, Curator filters, Writer formats, Delivery
+  transports.
+- **Configurability**: Runtime choices that operators reasonably need to vary
+  belong in configuration rather than hardcoded source behavior.
+- **Bounded Contracts**: Public configuration and output contracts reject
+  unsupported shapes when practical.
+- **Observable Verification**: Completed behavior can be checked without
+  trusting implementation claims.
+- **Complexity Control**: The solution is no broader than needed for the Goal.
+- **Backward Compatibility**: Existing documented behavior remains unchanged
+  unless the Goal explicitly changes it.
+- **Safety and Privacy**: Diagnostics and errors do not expose secrets,
+  credentials, tokens, chat IDs, or sensitive environment values.
+- **Project Fit**: The design matches the existing command-line, provider,
+  ledger, and delivery architecture.
+
+## Workflow Lanes
+
+Governance is proportional to risk.
+
+### Lightweight
+
+Appropriate for low-risk changes governed by existing contracts.
+
+Governance may be waived if the Planner records:
+
+- why the existing contract is sufficient;
+- what evidence was checked;
+- why independent evaluation is not needed.
+
+### Standard
+
+Appropriate for bounded observable behavior changes.
+
+Governance should confirm:
+
+- the Behavior Contract is complete enough;
+- tests and evidence cover success and failure behavior;
+- changed public behavior is documented;
+- future work is separated from current scope.
+
+### High-Assurance
+
+Required for public contracts, configuration, providers, delivery, ledger
+behavior, security/privacy, cross-stage responsibilities, or high-blast-radius
+changes.
+
+Governance must confirm:
+
+- independent holdout evaluation occurred;
+- public contracts are explicit and bounded;
+- failure behavior is defined;
+- side effects are intentional and verified;
+- architecture responsibilities remain intact.
+
+## Specifications
+
+Standalone specifications are optional governance tools.
+
+A standalone specification is required only when the Behavior Contract is too
+large or important to live comfortably in the Work File, or when independent
+evaluation needs a stable long-form reference.
+
+Whether standalone or embedded, specifications must:
+
+- describe observable behavior;
+- include success and failure behavior;
+- identify unchanged behavior when compatibility matters;
+- avoid prescribing internal implementation details;
+- state constraints such as no live external calls when relevant.
+
+## Evaluation
+
+Evaluation exists to provide confidence beyond implementation claims.
+
+A strong evaluation:
+
+- is performed from a fresh context when practical;
+- reads the Behavior Contract rather than the implementation plan;
+- checks externally observable behavior;
+- includes failure cases and forbidden side effects;
+- uses controlled providers or fixtures unless live calls are explicitly
+  required;
+- produces a clear PASS, PASS WITH WARNINGS, or FAIL.
+
+Evaluation should not own scope. It may report that completed behavior does
+not match the contract, that evidence is incomplete, or that side effects were
+observed. The Planner decides what to do with those findings.
+
+## Goal Reconciliation
+
+Goal Reconciliation is a Planner responsibility and the primary gate before
+evaluation.
+
+The Planner must not accept a task merely because the assigned implementation
+was completed. The Planner must ask whether the Goal and Director Intent are
+satisfied by the completed observable behavior.
+
+Current-scope work is required when a finding affects:
+
+- the stated Goal;
+- Director Intent;
+- public contracts;
+- required failure behavior;
+- compatibility promises;
+- ability to verify the behavior;
+- architecture responsibilities;
+- secret handling or external side effects.
+
+Future work is appropriate when a finding is useful but not necessary to
+satisfy the current Goal.
+
+## Documentation Governance
+
+Durable documentation should be updated only where it remains useful after the
+feature branch is complete.
+
+Highest-value durable documents:
+
+- `architecture.md` for product architecture and public contracts;
+- active Work Files for feature memory and decisions;
+- `eval_log.md` for append-only evidence;
+- configuration examples and operator-facing docs when behavior changes.
+
+Avoid duplicating the same behavior across Work File, standalone spec,
+evaluation file, architecture, build log, and final summary. Prefer one
+canonical description plus short references elsewhere.
+
+## Build and Evaluation Logs
+
+Build logs describe completed capabilities, assumptions, gaps, and suspected
+bugs. They should avoid implementation mechanics unless required to explain a
+public contract decision.
+
+Evaluation logs describe observable behavior and verdicts. They should not
+name internal functions, helper inputs, class names, algorithms, or test
+mechanics as the reason for PASS or FAIL.
+
+Build sessions do not write evaluation entries. Evaluation sessions do not
+write build-log entries.
+
+## Governance Review
+
+Governance Review is intentionally small. It should not repeat all task
+history or re-run evaluation.
+
+Review checklist:
+
+- The completed behavior matches the Behavior Contract.
+- The chosen workflow lane was appropriate.
+- Required independent evaluation was performed or deliberately waived.
+- Architecture responsibilities remain intact.
+- Public contracts are documented and reject unsupported behavior where
+  practical.
+- Existing behavior remains compatible except where intentionally changed.
+- Side effects and secret handling are acceptable.
+- Current-scope gaps are not mislabeled as future work.
+- The Director has enough evidence to decide.
+
+Governance outcomes:
+
+- **PASS**: ready for Director acceptance.
+- **PASS WITH WARNINGS**: acceptable if the Planner records why warnings do
+  not require current-scope work.
+- **FAIL**: not ready; Planner must create or revise current-scope tasks.
+
+## Acceptance
+
+A change is ready for Director acceptance when:
+
+1. the Work File contains a clear Goal, Discovery Brief, Behavior Contract,
+   evidence, and final status;
+2. implementation satisfies the Behavior Contract;
+3. Goal Reconciliation finds no missing current-scope behavior;
+4. required evaluation passes or is intentionally waived under the workflow
+   lane;
+5. Governance passes when required;
+6. durable documentation reflects changed public behavior;
+7. the Director accepts the completed work.
+
+Passing automated tests alone is not acceptance.
 
 ## Architectural Evolution
 
-Implementation may reveal architectural improvements that were not
-anticipated when the feature was proposed.
+Agents should surface architectural improvements discovered during work.
 
-Agents are encouraged to surface these improvements.
+The Planner may include an improvement in current scope only when it is
+necessary to satisfy the Goal, preserve architecture, make behavior
+verifiable, or avoid an undocumented public contract.
 
-The Planner agent may incorporate improvements into the current feature when
-they are necessary to satisfy governance or complete the intended
-behavior.
-
-When a feature changes how the application functions, the Planner agent has
-authority to create current-scope tasks to update durable project documents
-that describe that behavior. This includes documented configuration contracts,
-runtime behavior, stage responsibilities, provider responsibilities,
-command-line behavior, external dependencies, and artifact or ledger behavior.
-
-Documentation updates are current-scope when stale or missing documentation
-would make the completed behavior harder to understand, operate, evaluate, or
-govern. They should be recorded as future Work Files only when they describe
-follow-on improvements rather than the behavior completed by the current
-feature.
-
-Configuration contracts are part of the application's observable behavior.
-Features that introduce or modify configuration should ensure the documented
-configuration contract and the application's configuration validation behavior
-remain consistent so unsupported or undocumented configuration is rejected
-before runtime whenever practical.
-
-## Approval Semantics
-During autonomous feature development, specifications and evaluations are workflow artifacts produced by agents.
-Specifications and evaluations do not require separate Director approval before implementation or evaluation unless the Director explicitly requests it.
-The Director accepts or rejects the completed feature.
-Specifications, evaluations, evaluation results, governance findings, and the Work File together provide the supporting evidence for the Director's final acceptance decision.
-
-## Acceptance Criteria
-A feature is considered complete only when:
-1. A completed specification exists.
-2. The implementation satisfies the specification.
-3. A completed evaluation exists.
-4. The evaluation passes.
-5. Governance Review passes.
-6. The Director accepts the result.
-Passing tests alone does not guarantee acceptance. The Director may reject a feature that does not align with project goals, user experience expectations, or intended behavior.
-
-## Goal
-The goal is not to maximize automation.
-The goal is to maximize confidence that accepted behavior matches the intended outcome.
+Otherwise the improvement belongs in Future Work.

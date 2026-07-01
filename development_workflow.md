@@ -1,591 +1,429 @@
-# development_workflow.md
-
-# Autonomous Feature Development Workflow
+# Autonomous Development Workflow
 
 ## Purpose
 
-This document describes the standard workflow used to implement new
-features within this project.
-
-The workflow is intentionally designed around long-running autonomous
-development while preserving architectural discipline through
-specifications, evaluations, and governance reviews.
-
-The workflow is centered around a **Planner Agent** and a **Work File**.
-
-The Planner agent orchestrates work.
-
-The Work File records decisions rather than conversation. Information that can be derived from the Work File should not be duplicated elsewhere.
-
-------------------------------------------------------------------------
-
-# Principles
-
--   The Planner agent is the only long-running agent.
--   All implementation work is performed by short-lived subagents.
--   Every subagent begins with a fresh context.
--   The Work File is the single source of truth for feature progress.
--   Specifications describe observable behavior.
--   Evaluations verify specifications.
--   Governance determines whether the completed feature is
-    architecturally acceptable.
--   Completing an assigned task does not by itself prove that the feature
-    Goal or Director Intent has been satisfied.
-
-------------------------------------------------------------------------
-
-## Feature Branch
-
-All workflow commits are made to the active feature branch.
-
-Commits preserve durable repository state between fresh subagents.
-
-Subagents commit the artifacts and changes they produce before terminating.
-
-Whenever the Planner agent updates the Work File, it commits the updated Work File to the active feature branch before spawning the next subagent or ending the workflow.
-
-Commits do not imply feature acceptance or permission to merge into `main`.
-
-Only the Director may accept completed work for merge into `main`.
-
-------------------------------------------------------------------------
-
-# Feature Lifecycle
-
-## 1. Director Creates Feature
-
-The Director:
-
-- creates a feature branch from `main`
-- creates a new Work File in `work/`
-- The Director commits the initial Work File to the active feature branch before the Planner agent begins execution.
-
-Example:
-
-``` text
-work/telegram_delivery.md
-```
-
-Initial structure:
-
-``` markdown
-# Telegram Delivery
-
-## Goal
-
-Send the Writer output to Telegram after a successful pipeline run.
-
-## Director Intent (optional)
-
-Describe any required public interface or externally observable contract.
-
-## Initial Architectural Review
-
-## Tasks
-
-## Recommended Future Work Files
-
-## Governance
-
-## Final Summary
-```
-
-The Director may optionally include a **Director Intent** section in the Work
-File.
-
-Director Intent records any intended externally observable behavior or public interface that is important to the desired feature.
-
-Examples include:
-
-- configuration contracts
-- command-line interfaces
-- user-facing workflows
-- compatibility requirements
-- public artifacts
-
-Director Intent must not prescribe implementation details such as algorithms,
-internal data structures, helper functions, class names, or file organization.
-
-The Planner agent should preserve Director Intent unless it identifies a
-governance or architectural conflict requiring Director review.
-
-The Planner agent may refine implementation approach, task decomposition,
-and architectural realization provided the resulting feature remains
-consistent with the Director Intent.
-
-Director Intent supplements the feature Goal rather than replacing it.
-
-------------------------------------------------------------------------
-
-## 2. Planner Agent Initialization
-
-The Planner agent reads:
-
-- the Work File
-- development_workflow.md
-- governance.md
-- architecture.md
-
-The Planner agent performs an initial architectural review.
-
-The architectural review should identify architectural implications,
-observable behaviors, and configuration or interface changes introduced by
-the feature.
-
-The Planner agent should determine whether the feature Goal and Director
-Intent completely describe the observable behavioral contract of the
-completed feature.
-
-The Planner agent should also identify observable behavior that is implied by
-the feature Goal or Director Intent, even when that behavior is not explicitly
-spelled out. If implied behavior is necessary for the completed feature to
-satisfy its stated purpose, the Planner agent should record current-scope work
-for that behavior rather than leaving it for an implementation subagent to
-exclude.
-
-When implementation would introduce observable behavior that is necessary to
-fully define the completed feature but is not described by the feature Goal
-or Director Intent, the Planner agent should create current-scope work to
-complete the behavioral contract unless doing so would materially expand the
-intended feature.
-
-The Planner agent initializes the Work File using the project's standard structure.
-
-The standard top-level sections are:
-
-- Goal
-- Director Intent (optional)
-- Initial Architectural Review
-- Tasks
-- Recommended Future Work Files
-- Governance
-- Final Summary
-
-The Planner agent records the results of the architectural review.
-
-The Planner agent decomposes the feature goal into a series of manageable tasks.
-
-The Planner agent records these tasks in the Work File.
-
-The task list may evolve during development.
-
-The Planner agent may:
-
-- create new tasks
-- reorder tasks
-- refine tasks
-- remove obsolete tasks
-
-as new implementation observations, evaluation results, or governance findings are produced.
-
-The Planner agent may add detail within the standard Work File sections as needed.
-
-The Planner agent should not create additional top-level sections unless the workflow is updated.
-
-Information that can be derived from existing Work File content should not be duplicated.
-
-------------------------------------------------------------------------
-
-# Planner Agent Responsibilities
-
-The Planner agent:
-
-- owns the Work File
-- determines the next unfinished task
-- spawns subagents
-- collects artifacts
-- records results
-- maintains the Work File
-- evaluates implementation observations and recommendations
-- creates new tasks
-- records recommended future Work Files
-- initiates Governance Review
-- ensures completed features have a complete observable behavioral contract
-- reconciles completed task output against the Work File Goal, Director
-  Intent, Initial Architectural Review, prior Planner decisions, and
-  implementation observations before deciding what happens next
-
-The Planner agent owns task scope during the autonomous workflow. An
-implementation-authored specification, implementation observation, or
-subagent recommendation may inform scope decisions, but it does not define the
-feature boundary by itself.
-
-The Planner agent never edits implementation code.
-
-------------------------------------------------------------------------
-
-# Subagent Workflow
-
-For each task, the Planner agent spawns a fresh implementation subagent.
-
-Specifications are stored in `specs/`.
-
-Evaluations are stored in `evals/`.
-
-Artifact filenames recorded in the Work File should be repository-relative paths.
-
-The implementation subagent receives:
-
--   development_workflow.md
--   governance.md
--   architecture.md
--   the current Work File
--   the current task description
-
-The implementation subagent:
-
-1. creates a behavioral specification
-2. implements the specification
-3. records an implementation summary
-4. records implementation observations
-5. recommends potential current-scope work
-6. recommends potential future Work Files
-
-The implementation subagent returns:
-
-- specification filename
-- implementation summary
-- implementation observations
-- current-scope recommendations
-- future Work File recommendations
-
-Before terminating, the implementation subagent commits the specification, implementation changes, and any implementation artifacts it produced to the active feature branch.
-
-Commits to the feature branch preserve durable workflow state between fresh subagents.
-
-Commits to the feature branch do not imply feature acceptance or permission to merge into `main`.
-
-The implementation subagent then terminates.
-
-The Planner agent records the returned information in the Work File.
-
-------------------------------------------------------------------------
-
-# Goal Reconciliation
-
-After each implementation task returns, the Planner agent must perform a goal
-reconciliation before deciding that the task is ready for evaluation or that
-the feature is ready for Governance Review.
-
-Goal reconciliation asks whether the completed observable behavior, together
-with already completed work, fully satisfies the Work File Goal and Director
-Intent when read through the Initial Architectural Review, prior Planner
-decisions, and governance principles.
-
-The Planner agent must not limit this check to whether the subagent completed
-the assigned task literally. Subagents are short-lived construction agents;
-their output reflects the scope they were given. If a subagent surfaces an
-omission, exclusion, implementation observation, or recommendation that affects
-the feature's stated purpose, the Planner agent treats that information as
-evidence for scope reconciliation, not as proof that the omitted behavior is
-optional.
-
-If the feature Goal or Director Intent includes qualitative observable outcomes
-such as variety, coverage, freshness, reliability, compatibility,
-configurability, safety, or usability, the Planner agent should identify the
-concrete observable behaviors needed to preserve those outcomes. If completed
-work can undermine one of those stated outcomes, the Planner agent should
-create current-scope work unless doing so would materially expand the
-Director's intended feature.
-
-Possible reconciliation outcomes:
-
-- The goal is satisfied for the current task and no new current-scope behavior
-  is implied. The Planner agent may proceed to evaluation for that task, or to
-  Governance Review when all tasks have completed successfully.
-- The goal is not yet satisfied because implied current-scope behavior is
-  missing. The Planner agent records why the goal remains incomplete, records
-  what was learned from the completed work or implementation observations,
-  updates the task plan, and returns to discovery or task decomposition before
-  spawning the next fresh implementation subagent.
-- The goal cannot be reconciled because the Work File Goal or Director Intent
-  is materially ambiguous or appears to conflict with governance or
-  architecture. The Planner agent records the ambiguity or conflict and seeks
-  Director input rather than guessing.
-
-When goal reconciliation creates or changes current-scope work, the Planner
-agent updates and commits the Work File before spawning the next subagent or
-ending the workflow.
-
-------------------------------------------------------------------------
-
-# Evaluation
-
-After a task implementation is complete and goal reconciliation does not
-identify missing current-scope behavior for that task, the Planner agent
-spawns a fresh evaluation-authoring subagent.
-
-The evaluation-authoring subagent receives:
-
-- development_workflow.md
-- governance.md
-- architecture.md
-- the current Work File
-- the specification
-
-The evaluation-authoring subagent:
-
-1. creates an evaluation for the completed implementation
-2. returns the evaluation filename to the Planner agent
-
-Before terminating, the evaluation-authoring subagent commits the evaluation artifact it produced to the active feature branch.
-
-Commits to the feature branch do not imply feature acceptance or permission to merge into `main`.
-
-The evaluation-authoring subagent then terminates.
-
-The Planner agent then spawns a completely fresh Evaluation Agent.
-
-The Evaluation Agent receives:
-
-- development_workflow.md
-- governance.md
-- architecture.md
-- the current Work File
-- the specification
-- the evaluation
-
-The Evaluation Agent performs the evaluation.
-
-Possible results:
-
-- PASS
-- PASS WITH WARNINGS
-- FAIL
-
-The Evaluation Agent returns:
-
-- evaluation result
-- supporting observations
-
-Before terminating, the Evaluation Agent commits any evaluation artifacts it produced, including evaluation logs, to the active feature branch.
-
-Commits to the feature branch do not imply feature acceptance or permission to merge into `main`.
-
-Evaluation artifacts are committed regardless of the evaluation result so that the completed evaluation remains part of the permanent feature history.
-
-The Evaluation Agent then terminates.
-
-The Planner agent records the evaluation result and supporting observations in the Work File.
-
-If the evaluation returns PASS WITH WARNINGS:
-
-- The Planner agent reviews the warnings.
-- If the Planner agent determines that additional current-scope work is required, it creates one or more new tasks.
-- Otherwise, the task is considered complete.
-
-------------------------------------------------------------------------
-
-# Planner Agent Loop
-
-For each task:
-
-1. Spawn a fresh implementation subagent.
-2. Record the implementation results.
-3. Perform goal reconciliation against the Work File Goal, Director Intent,
-   Initial Architectural Review, prior Planner decisions, and implementation
-   observations.
-4. If reconciliation shows that current-scope behavior is missing, update the
-   Work File, revise or add tasks, and return to discovery or task
-   decomposition before spawning the next implementation subagent.
-5. If reconciliation shows that the task is ready for verification, spawn a
-   fresh evaluation subagent.
-6. Record the evaluation results.
-
-If the evaluation fails:
-
-- The Planner agent records the evaluation result in the Work File.
-- The Planner agent creates a new iteration for the current task.
-- The Planner agent spawns a fresh implementation subagent for the new iteration.
-- The task loop repeats.
-
-If implementation observations or recommendations identify potential current-scope work:
-
-- Review each recommendation.
-- Determine whether the completed feature would have a complete observable
-  behavioral contract without the recommended work.
-- If the behavioral contract would be incomplete, create a new current-scope
-  task to complete it.
-- Otherwise, determine whether the recommendation should be recorded as a
-  future Work File or rejected.
-
-If an implementation subagent excludes behavior from its specification or
-describes behavior as out of scope:
-
-- Compare that exclusion against the Work File Goal, Director Intent, Initial
-  Architectural Review, and governance principles.
-- Determine whether the excluded behavior materially affects the completed
-  feature's stated purpose or observable behavioral contract.
-- If it does, create a current-scope task, update the Work File, and continue
-  the workflow.
-- If it does not, record the Planner decision to accept the exclusion, record
-  it as a future Work File, or reject it.
-
-The absence of a requirement from an implementation-authored specification
-does not by itself make the behavior out of scope. The Planner agent may
-create current-scope tasks for behavior implied by the Work File Goal,
-Director Intent, or Initial Architectural Review, including behavior discovered
-during implementation or evaluation.
-
-If implementation observations identify work outside the scope of the current feature:
-
-- Review each recommendation.
-- Record an accepted recommendation as a future Work File.
-
-A task is complete only when:
-
-- its latest iteration passes evaluation, and
-- all tasks created from its implementation observations are complete.
-
-When a task is complete:
-
-- Continue to the next incomplete task.
-
-Before initiating Governance Review, the Planner agent must perform one final
-goal reconciliation across all completed tasks. If the Work File Goal or
-Director Intent is not fully satisfied, the Planner agent records why, updates
-the task plan, and resumes the workflow from the next incomplete current-scope
-task instead of starting Governance Review.
-
-------------------------------------------------------------------------
-
-# Governance Review
-
-When every task has completed successfully:
-
-The Planner agent starts a fresh Governance Review Agent.
-
-The Governance Review Agent receives:
-
-- development_workflow.md
-- governance.md
-- architecture.md
-- the current Work File
-- all completed specifications
-- all completed evaluations
-
-The Governance Review Agent evaluates the completed feature against:
-
-- governance.md
-- architecture.md
-
-Possible outcomes:
-
-- PASS
-- PASS WITH WARNINGS
-- FAIL
-
-The Governance Review Agent returns:
-
-- governance result
-- governance findings
-
-The Governance Review Agent then terminates.
-
-The Planner agent records the governance results and findings in the Work File.
-
-If Governance Review returns PASS:
-
-- The feature is ready for Director acceptance.
-
-If Governance Review returns PASS WITH WARNINGS:
-
-- The Planner agent reviews the governance findings.
-- If the Planner agent determines that additional current-scope work is required, it creates one or more new tasks.
-- Otherwise, the feature is ready for Director acceptance.
-
-If Governance Review returns FAIL:
-
-- The Planner agent creates one or more new tasks to address the governance findings.
-- The workflow resumes from the next incomplete task.
-
-------------------------------------------------------------------------
-
-# End State
-
-The workflow completes when:
-
-- every task has passed evaluation
-- Governance Review passes
-- the Director accepts the completed feature
-- the Planner agent records a final implementation summary
-- no additional work remains
-
-The completed Work File becomes the permanent history of how the feature evolved.
-
-------------------------------------------------------------------------
-
-## Work File Example with example logging flow
+This workflow is designed for autonomous feature development with strong
+engineering discipline, independent verification, and low artifact drag.
+
+The workflow exists to preserve confidence that accepted behavior matches the
+Director's intent. It should not maximize documentation volume. Each artifact
+must either help the next agent reason correctly, help an evaluator verify
+behavior independently, or preserve durable project memory.
+
+The central durable artifact is the **Work File**. It records decisions,
+behavior contracts, status, evidence, and unresolved questions. Standalone
+specifications and evaluations are optional tools used when risk warrants them.
+
+## Core Principles
+
+- The Planner is the long-running coordinator and architectural owner.
+- Implementation and independent evaluation are performed by fresh contexts
+  whenever practical.
+- The Work File is the canonical memory for active work.
+- Observable behavior is the unit of planning, implementation, and evaluation.
+- Goal Reconciliation is the main acceptance gate before independent
+  evaluation.
+- Holdout evaluation checks completed behavior independently; it does not
+  design the implementation.
+- Governance is a small architectural and process confidence gate.
+- Documentation is written once in the place where it will remain useful.
+- A smaller workflow is preferred when it preserves confidence.
+
+## Roles
+
+### Director
+
+The Director defines desired outcomes, approves final behavior, and decides
+whether completed work may merge.
+
+Director Intent may include public interfaces, compatibility requirements,
+configuration contracts, operational constraints, or user-visible workflows.
+Director Intent should not prescribe internal algorithms, class names, helper
+functions, or file layouts unless those details are themselves public
+requirements.
+
+### Planner
+
+The Planner owns scope, sequencing, architectural reasoning, and durable memory.
+The Planner does not edit implementation code.
+
+The Planner:
+
+- reads the active Work File, this workflow, governance rules, and architecture
+  contracts;
+- performs Discovery before planning implementation;
+- decides the workflow lane;
+- records the behavior contract;
+- delegates implementation to fresh contexts;
+- reconciles completed work against the Goal and Director Intent;
+- decides whether observations require another planning iteration;
+- requests independent evaluation when warranted;
+- records accepted future work;
+- initiates Governance Review;
+- prepares the Director-ready final summary.
+
+### Implementation Agent
+
+The Implementation Agent receives the Work File and the current task. It
+implements the agreed behavior, adds focused tests appropriate to the risk, and
+reports observations that may affect scope.
+
+It may propose implementation choices, but it does not redefine the Goal,
+Director Intent, or public behavior contract.
+
+### Evaluation Agent
+
+The Evaluation Agent receives the Work File, the behavior contract, and any
+evaluation instructions. It independently judges completed behavior from the
+outside whenever practical.
+
+It reports PASS, PASS WITH WARNINGS, or FAIL. It may identify behavioral gaps,
+side effects, or evidence limitations. The Planner decides whether those
+findings create current-scope work.
+
+### Governance Reviewer
+
+The Governance Reviewer performs a compact architectural and process review. It
+does not repeat the full evaluation. It asks whether the completed change fits
+the project architecture, preserves discipline, and gives the Director enough
+evidence to accept or reject the work.
+
+## Work File
+
+Every feature or meaningful change has one Work File under `work/`. The Work
+File is the active memory spine. It should be concise, append-friendly, and
+decision-oriented.
+
+Recommended structure:
 
 ```markdown
-# Telegram Delivery
+# Feature Name
 
 ## Goal
 
-Send the Writer output to Telegram after a successful pipeline run.
+## Director Intent
 
-## Tasks
+## Discovery Brief
 
-- Task 1: Create Delivery abstraction
-    - Spec: `specs/delivery_abstraction.md`
-    - Summary: Created generic Delivery abstraction.
-    - Eval: `evals/delivery_abstraction.eval.md`
-    - Result: PASS
+## Workflow Lane
 
-- Task 2: Implement Telegram module
-    - Iteration 1
-        - Spec: `specs/telegram_delivery.md`
-        - Summary: Implemented Telegram delivery.
-        - Eval: `evals/telegram_delivery.eval.md`
-        - Result: FAIL
-        - Reason: Telegram credentials were hardcoded.
-    - Iteration 2
-        - Spec: `specs/telegram_configuration.md`
-        - Summary: Moved Telegram credentials into config.
-        - Eval: `evals/telegram_configuration.eval.md`
-        - Result: PASS
-    - Implementation Observations
-        - Retry policy should be configurable.
-            - Planner Agent Decision: Create Task 5.
-        - Multiple delivery destinations would be valuable.
-            - Planner Agent Decision: Recommend Future Work File.
-            - Suggested Work File: `work/multi_destination_delivery.md`
+## Behavior Contract
 
-- Task 3: Add configuration support
-    - Spec: `specs/configuration_support.md`
-    - Summary: Added delivery config loading.
-    - Eval: `evals/configuration_support.eval.md`
-    - Result: PASS
+## Task Plan
 
-- Task 4: Integrate Pipeline with Delivery
-    - Spec: `specs/pipeline_delivery_integration.md`
-    - Summary: Pipeline sends Writer output through configured delivery module.
-    - Eval: `evals/pipeline_delivery_integration.eval.md`
-    - Result: PASS
+## Iterations
 
-- Task 5: Make retry policy configurable
-    - Origin: Task 2 Implementation Observation
-    - Reason: Retry policy was identified as a configurable concern during implementation.
-    - Spec: `specs/retry_configuration.md`
-    - Summary: Added configurable retry count.
-    - Eval: `evals/retry_configuration.eval.md`
-    - Result: PASS
+## Evidence
 
-## Recommended Future Work Files
+## Open Questions
+
+## Future Work
 
 ## Governance
 
-- Result: PASS
-- Notes: Modular, configurable, observable, and extensible.
-
 ## Final Summary
-
-- Outcome: Complete
-- Director Action: Review branch and merge if accepted.
 ```
 
-------------------------------------------------------------------------
+The Work File should not duplicate information that is already canonical in
+`architecture.md`, checked-in tests, build logs, or evaluation artifacts. It may
+link to those artifacts and record the decision made from them.
 
-# Exploration
+## Workflow Lanes
 
-When requirements are ambiguous or multiple architectural approaches appear viable, the Director may create multiple feature branches from the same starting point. Each branch follows the standard development workflow independently. The Director evaluates the completed branches and selects one for merging. This exploration strategy is optional and is intended to improve solution quality rather than replace the normal workflow.
+The Planner chooses the lightest lane that preserves correctness.
+
+### Lightweight Lane
+
+Use for documentation-only work, tiny internal refactors, test maintenance, or
+bug fixes where the desired behavior is already defined by an existing
+contract.
+
+Required:
+
+- Discovery Brief
+- Behavior Contract or explicit reference to an existing contract
+- implementation by a fresh agent when practical
+- focused tests or static checks when applicable
+- Goal Reconciliation
+- Work File final summary
+
+Standalone specification, standalone evaluation, and Governance Review are
+optional unless the Planner identifies risk.
+
+### Standard Lane
+
+Use for most feature work that changes observable behavior in a bounded area.
+
+Required:
+
+- Discovery Brief
+- Behavior Contract in the Work File
+- implementation by a fresh agent
+- focused automated tests
+- Goal Reconciliation
+- independent evaluation or explicit Planner rationale for skipping it
+- compact Governance Review
+- final Work File summary
+
+Standalone specifications and evaluation files are optional. Use them when the
+contract or evaluation matrix is too large to keep readable in the Work File.
+
+### High-Assurance Lane
+
+Use when work changes public contracts, provider behavior, configuration
+format, ledger/output shape, delivery behavior, security/privacy expectations,
+cross-stage boundaries, or anything expensive to repair after release.
+
+Required:
+
+- Discovery Brief
+- explicit Behavior Contract
+- standalone specification when the contract is large or reusable
+- implementation by a fresh agent
+- automated tests covering stated success and failure behavior
+- Goal Reconciliation before evaluation
+- independent holdout evaluation
+- Governance Review
+- durable documentation updates for public behavior
+- final Work File summary
+
+## Discovery
+
+Discovery happens before implementation planning. Its purpose is to turn a
+Goal into an actionable, testable behavior contract while exposing ambiguity
+early.
+
+The Discovery Brief must answer:
+
+- What existing behavior is relevant?
+- What public or operational behavior is intended to change?
+- What must remain unchanged?
+- Which components, configuration contracts, command-line surfaces, prompts,
+  templates, providers, ledgers, diagnostics, or delivery paths are affected?
+- What failure behavior is implied?
+- What backward-compatibility expectations apply?
+- What side effects are allowed or forbidden?
+- What evidence would prove the Goal is satisfied?
+- What is ambiguous enough to require Director input?
+
+If Discovery reveals missing or conflicting requirements, the Planner records
+the question and stops instead of guessing.
+
+## Behavior Contract
+
+The Behavior Contract is the canonical statement of what the current work must
+deliver. For many changes it lives directly in the Work File.
+
+It should include:
+
+- public inputs or triggers;
+- successful observable behavior;
+- failure behavior;
+- side effects;
+- unchanged behavior;
+- compatibility requirements;
+- validation or security expectations;
+- required evidence.
+
+The contract describes behavior, not implementation details. Internal module
+names, helper functions, data structures, and algorithms belong in
+implementation notes only when they are part of a public interface.
+
+## Standalone Specifications
+
+A standalone specification is no longer mandatory for every feature.
+
+Create one when:
+
+- the behavior contract is large enough to obscure the Work File;
+- the feature changes public configuration, CLI, provider, delivery, ledger,
+  diagnostic, or cross-stage contracts;
+- multiple implementation iterations are likely;
+- the specification will be reused by future work;
+- independent evaluation needs a stable long-form reference.
+
+Do not create one merely to satisfy ceremony. If the Behavior Contract in the
+Work File is clear, complete, and durable enough, it is the specification.
+
+## Task Planning
+
+The Planner decomposes work into tasks only after Discovery and the initial
+Behavior Contract exist.
+
+Good tasks produce a complete observable increment. Avoid tasks that only
+mirror file boundaries unless the file boundary is also a behavior boundary.
+
+Each task should record:
+
+- scope;
+- lane;
+- required evidence;
+- whether independent evaluation is required;
+- known non-goals;
+- dependencies on prior tasks.
+
+## Implementation
+
+The Implementation Agent receives:
+
+- this workflow;
+- `governance.md`;
+- `architecture.md`;
+- the active Work File;
+- the current task and Behavior Contract.
+
+The Implementation Agent:
+
+1. confirms the relevant contract and open questions;
+2. implements the smallest change that satisfies the contract;
+3. adds tests proportional to risk and blast radius;
+4. avoids live external calls unless the Work File requires them;
+5. updates durable product documentation when public behavior changes;
+6. appends the required build log entry for build sessions;
+7. commits its changes on the active feature branch when instructed by the
+   repository workflow;
+8. reports implementation observations.
+
+Implementation observations should distinguish:
+
+- evidence that the Goal may not yet be satisfied;
+- risks or gaps in the public contract;
+- implementation tradeoffs;
+- optional improvements;
+- future work beyond the current Goal.
+
+## Goal Reconciliation
+
+Goal Reconciliation is the main Planner acceptance gate.
+
+It occurs:
+
+- after Discovery, before implementation starts;
+- after each implementation task;
+- after evaluation findings when needed;
+- before Governance Review.
+
+Goal Reconciliation asks whether completed behavior, together with prior
+completed work, satisfies the Goal and Director Intent when read through the
+Behavior Contract, architecture, governance rules, and implementation
+observations.
+
+The Planner must create another planning iteration when an observation shows:
+
+- the implemented behavior does not satisfy the Goal;
+- an implied public behavior is missing;
+- a failure mode is undefined;
+- a public contract accepts undocumented input;
+- a stage boundary or responsibility has shifted accidentally;
+- compatibility was broken without being part of the Goal;
+- independent verification cannot observe the promised behavior;
+- public documentation would be stale after the change.
+
+The Planner records a future work item rather than current-scope work when the
+observation improves maintainability, generality, performance, or operator
+comfort without being necessary to satisfy the current Goal.
+
+## Evaluation
+
+Evaluation is independent verification of completed behavior. It should add
+confidence that implementation tests alone cannot provide.
+
+Evaluation is required for High-Assurance work. It is normally expected for
+Standard work. It is optional for Lightweight work when the Planner records why
+tests and reconciliation are enough.
+
+Evaluation should:
+
+- read the Behavior Contract, not implementation intent;
+- inspect behavior from command-line, configuration, artifact, provider, or
+  downstream-user perspectives where practical;
+- include success and failure behavior;
+- check forbidden side effects;
+- avoid live external calls unless required;
+- report only observable results as the basis for PASS or FAIL.
+
+Evaluation should not prescribe implementation design. If it finds a gap, it
+reports the observed mismatch. The Planner decides whether the mismatch becomes
+current-scope work, a warning, or future work.
+
+Standalone evaluation files are optional. Create one when the evaluation
+matrix is large, reusable, or high-risk. Otherwise record the evaluation plan
+and result in the Work File.
+
+## Governance Review
+
+Governance Review is a compact final check, not a second evaluation.
+
+It asks:
+
+- Does the completed behavior fit the architecture?
+- Are responsibilities still separated correctly?
+- Are public contracts documented and bounded?
+- Are configuration and validation consistent?
+- Are side effects intentional and observable?
+- Did independent verification happen at the level required by the lane?
+- Are current-scope gaps separated from future work?
+- Does the Director have enough evidence to accept or reject the change?
+
+Governance outcomes:
+
+- PASS: ready for Director acceptance.
+- PASS WITH WARNINGS: architecturally acceptable, but the Planner must decide
+  whether warnings require current-scope work.
+- FAIL: not ready; Planner creates or revises tasks.
+
+## Logs
+
+`eval_log.md` remains append-only.
+
+Build sessions append build-log entries only when application behavior,
+durable product documentation, configuration contracts, tests, or other
+project artifacts are changed.
+
+Evaluation sessions append evaluation entries only when independent evaluation
+is performed.
+
+Build-log entries describe completed capabilities and assumptions. Evaluation
+entries describe observable product behavior and verdicts. Neither should
+duplicate the full Work File.
+
+## Durable Documentation
+
+Update durable product documentation when accepted behavior changes:
+
+- configuration contracts;
+- command-line behavior;
+- provider responsibilities;
+- stage contracts;
+- ledger or diagnostic behavior;
+- delivery behavior;
+- external dependencies.
+
+Do not update durable product documentation for temporary implementation
+strategy, speculative future work, or internal details that are not part of
+the public or operational contract.
+
+## Completion
+
+A feature is ready for Director acceptance when:
+
+- the Work File has a clear Goal, Discovery Brief, Behavior Contract, evidence,
+  and final status;
+- implementation satisfies the Behavior Contract;
+- Goal Reconciliation finds no missing current-scope behavior;
+- required evaluation has passed or been deliberately waived under the chosen
+  lane;
+- Governance Review passes when required;
+- durable product documentation reflects changed public behavior;
+- future work is separated from current-scope obligations.
+
+Director acceptance remains required before merge.
+
+## Exploration
+
+When multiple architectural approaches are plausible and the cost of choosing
+wrong is high, the Director may request exploratory branches.
+
+Exploration branches should still use Discovery, Behavior Contracts, and
+evidence. They may use lighter evaluation until one approach is selected for
+production-quality implementation.
