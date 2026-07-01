@@ -93,6 +93,7 @@ The implementation report must include:
 
 - spec used
 - summary of observable work completed
+- tests or checks run
 - assumptions made
 - gaps or suspected bugs
 

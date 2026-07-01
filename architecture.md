@@ -16,15 +16,15 @@ The current default profile is `techno-releases`; its default stage path uses
 Bandcamp for Researcher collection, OpenAI for Curator ranking/filtering,
 Ollama for Writer prose generation, and Telegram delivery when enabled.
 
-Five conceptual pieces make up the configured pipeline. Planner and Delivery
-are plain code. Curator and Writer are model-backed in the default pipeline;
-Researcher may be model-backed or source-backed depending on its configured
-provider.
+Five conceptual pieces make up the configured pipeline. The runtime Planner and
+Delivery are plain code. Curator and Writer are model-backed in the default
+pipeline; Researcher may be model-backed or source-backed depending on its
+configured provider.
 
-- **Planner** (pure Python — no LLM) — coordinates the pipeline. Reads and
-  writes a JSON task ledger, validates each stage's output before
-  advancing to the next, and records the run outcome. It is designed to be
-  started manually or by an external scheduling mechanism.
+- **runtime Planner** (pure Python — no LLM) — coordinates the pipeline. Reads
+  and writes a JSON task ledger, validates each stage's output before advancing
+  to the next, and records the run outcome. It is designed to be started
+  manually or by an external scheduling mechanism.
 - **Researcher** (configured collection provider) — finds raw candidate items
   through the configured provider. Gemini and OpenAI are supported as
   search-capable model providers; Bandcamp is supported as a source-backed
@@ -199,7 +199,7 @@ final message from the configured template.
 Scheduled invocation
      │
      ▼
-Planner ──▶ Researcher ──▶ Curator ──▶ Writer
+ runtime Planner ──▶ Researcher ──▶ Curator ──▶ Writer
               │              │           │
               ▼              ▼           ▼
          Validate      Validate      Validate
@@ -210,7 +210,7 @@ Planner ──▶ Researcher ──▶ Curator ──▶ Writer
               └──────────────┴───────────┘
                           │
                           ▼
-                  Planner records stages
+             runtime Planner records stages
                           │
                           ▼
           Delivery sends via enabled providers

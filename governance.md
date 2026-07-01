@@ -1,15 +1,21 @@
 # Governance Notes
-This project is intentionally developed through:
-- behavioral specifications
-- implementation by coding agents
-- evaluation against specifications
+This project is intentionally developed through behavioral specifications,
+implementation by coding agents, and independent evaluation against
+specifications.
+
+`development_workflow.md` is the operational source of truth for executing the
+autonomous feature development workflow. This document defines the engineering
+principles that guide that workflow.
 
 ## Principles
 - Specs describe observable behavior, not implementation.
 - Evals test both success and failure conditions.
 - Code is treated as a black box whenever possible.
 - Runtime observations should drive future specs.
-- Build logs describe capabilities, not implementation details.
+- The Planner Agent coordinates engineering work.
+- The Planner Agent does not implement code.
+- The Planner Agent does not evaluate its own implementation.
+- Evaluation is performed independently whenever practical.
 - Dependencies are allowed when they avoid reimplementing established functionality.
 - Human review and acceptance are required for all features.
 
@@ -18,11 +24,9 @@ The human acts as Director rather than primary implementer.
 Agents may propose specifications, implementations, evaluations, and improvements. These proposals are advisory until reviewed and accepted by the Director.
 The Director is responsible for:
 - defining the problem or desired outcome
-- approving specifications
-- approving evaluation criteria
 - selecting between competing solutions
 - accepting or rejecting completed work
-Agent-generated specifications and evaluations are allowed and encouraged when they improve clarity, coverage, or quality. Human approval is required before they become project requirements.
+Agent-generated specifications and evaluations are allowed and encouraged when they improve clarity, coverage, or quality.
 
 ### Specification Boundary
 Specifications describe observable behavior.
@@ -37,41 +41,10 @@ unless those details are themselves observable requirements.
 Implementation decisions belong to design discussions, code reviews,
 or implementation plans, not behavioral specifications.
 
-## Development Flow
-The preferred workflow is:
-```text
-Intent
-↓
-Specification
-↓
-Implementation
-↓
-Evaluation
-↓
-Selection
-```
-A typical feature may follow this process:
-```text
-Human → define problem
-Agent → draft specification
-Human → review and approve specification
-Agent → implement feature
-Agent or independent agent → draft evaluation
-Human → review and approve evaluation
-Independent agent → execute evaluation
-Human → accept, reject, or revise the feature
-```
-
 ## Separation of Responsibilities
-Whenever practical, proposal, implementation, and evaluation should be performed by different actors.
-Example:
-```text
-Director → defines intent and approves artifacts
-Agent A → proposes specification
-Agent A → implements feature
-Agent B → evaluates feature
-Director → makes final acceptance decision
-```
+Whenever practical, coordination, implementation, and evaluation should be
+performed by different actors.
+
 This separation is intended to reduce self-validation and increase confidence in outcomes.
 
 ### Agent Expectations
@@ -89,9 +62,9 @@ Independent evaluation is preferred because it reduces self-validation and incre
 
 ## Acceptance Criteria
 A feature is considered complete only when:
-1. An approved specification exists.
+1. A specification exists.
 2. The implementation satisfies the specification.
-3. An approved evaluation exists.
+3. An evaluation exists.
 4. The evaluation passes.
 5. The Director accepts the result.
 Passing tests alone does not guarantee acceptance. The Director may reject a feature that does not align with project goals, user experience expectations, or intended behavior.

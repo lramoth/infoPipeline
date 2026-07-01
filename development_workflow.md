@@ -21,9 +21,9 @@ The Director remains responsible for feature selection and final acceptance.
 - `specs/` contains Planner Agent-authored behavioral specifications.
 - `evals/` contains Planner Agent-authored evaluation specifications.
 
-The Work File is the durable record for a feature. Existing `eval_log.md`
-history may remain in the repository, but it is not part of the active
-workflow and is not updated for new work.
+The Work File is the durable record for a feature. Historical records may
+remain in the repository, but they are not part of the active workflow and are
+not updated for new work.
 
 ## Roles
 
@@ -44,6 +44,10 @@ evaluations.
 
 The Director accepts, rejects, or requests additional work after reviewing the
 completed Work File.
+
+Planner Agent-authored specifications and evaluations may be executed without
+separate Director approval unless the Director explicitly requests an approval
+checkpoint.
 
 ### Planner Agent
 
@@ -149,6 +153,9 @@ The Work File records:
 The Work File records paths to the specification and evaluation. It does not
 duplicate their contents.
 
+Recording implementation or evaluation commits is optional unless the Director
+explicitly requests commit tracking for the feature.
+
 ## Specification Lifecycle
 
 The Planner Agent writes a behavioral specification in `specs/`.
@@ -159,6 +166,9 @@ criteria, constraints, and out-of-scope work.
 
 Specifications must not prescribe implementation details unless those details
 are observable public requirements.
+
+If public or operational behavior changes, update the durable product
+documentation that describes that behavior.
 
 ## Evaluation Lifecycle
 
