@@ -1,5 +1,9 @@
 # Lightweight Autonomous Development Workflow
 
+This document is the source of truth for the autonomous feature development
+workflow. Other project guidance may refer to it, but workflow behavior should
+be defined here rather than restated elsewhere.
+
 ## Purpose
 
 This workflow automates the Director's existing engineering handoffs without
@@ -24,6 +28,9 @@ The Director remains responsible for feature selection and final acceptance.
 The Work File is the durable record for a feature. Historical records may
 remain in the repository, but they are not part of the active workflow and are
 not updated for new work.
+
+The active workflow records implementation and evaluation results in the Work
+File.
 
 ## Roles
 
@@ -73,6 +80,10 @@ The Planner Agent never implements code.
 
 The Planner Agent never evaluates its own implementation.
 
+The Planner Agent records implementation and evaluation reports in the Work
+File using externally observable behavior and completed capabilities, not
+internal implementation details.
+
 ### Implementation Agent
 
 The Implementation Agent reads:
@@ -92,6 +103,20 @@ The Implementation Agent is responsible for:
 
 The Implementation Agent does not evaluate correctness against the
 specification.
+
+Implementation reports must include:
+
+- spec used
+- summary of observable work completed
+- tests or checks run
+- assumptions made
+- limitations or gaps
+- future work recommendations, when applicable
+
+Implementation summaries, observations, assumptions, limitations, and future
+work must describe externally observable behavior and completed capabilities.
+Implementation details may be included only under assumptions, limitations,
+future work, or when required to explain a public contract decision.
 
 ### Evaluation Agent
 
@@ -115,6 +140,45 @@ The Evaluation Agent may:
 - identify implementation gaps
 
 The Evaluation Agent does not modify implementation.
+
+Evaluation reports must include:
+
+- evaluation file used
+- PASS/FAIL result for each scenario
+- one-sentence product-behavior reason for each scenario result
+- overall verdict
+
+Evaluation results must describe observable behavior and must not mention
+implementation identifiers or test mechanics, including class names, function
+names, method names, file paths, return values, booleans, exception class
+names, exact helper inputs, or internal algorithms.
+
+## Project Rules
+
+For code changes, new features, bug fixes, or any change that affects how the
+application works, the only source of requirements is the specification file
+referenced by the Planner Agent.
+
+Documentation-only changes may be made without a specification when the
+Director asks for documentation updates and does not require application
+behavior changes.
+
+If a requirement is ambiguous or missing, the Implementation Agent reports the
+ambiguity to the Planner Agent for recording in the Work File and stops rather
+than guessing.
+
+If implementation details are unspecified, the Implementation Agent chooses the
+simplest reasonable implementation that satisfies the specification. This
+includes module names, function names, class names, internal data structures,
+and helper methods, unless the specification explicitly defines them.
+
+Calls to Gemini, OpenAI, Ollama, and Telegram are not needed while implementing
+logic. Real calls happen only during evaluation, in a separate session, when
+the evaluation scenario requires genuine search, model, or delivery
+confirmation.
+
+Agents must not explore, list, or reference anything outside this repository
+directory tree.
 
 ## Work File Lifecycle
 
@@ -142,6 +206,7 @@ The Work File records:
 - specification path
 - implementation summary
 - implementation observations
+- tests or checks run
 - assumptions
 - limitations
 - future work
@@ -190,8 +255,8 @@ The Planner Agent records the evaluation result in the Work File.
 4. The Planner Agent delegates implementation to an Implementation Agent.
 5. The Implementation Agent implements the specification, runs appropriate
    tests, and reports observations.
-6. The Planner Agent records the implementation summary, observations,
-   assumptions, limitations, and future work in the Work File.
+6. The Planner Agent records the implementation summary, observations, tests
+   or checks run, assumptions, limitations, and future work in the Work File.
 7. The Planner Agent writes an evaluation specification in `evals/` and records
    its path in the Work File.
 8. The Planner Agent delegates evaluation to a fresh-context Evaluation Agent.
@@ -208,6 +273,7 @@ The Planner Agent's responsibility is complete after it records:
 
 - implementation summary
 - implementation observations
+- tests or checks run
 - assumptions
 - limitations
 - future work
