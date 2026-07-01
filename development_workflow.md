@@ -29,6 +29,8 @@ The Work File records decisions rather than conversation. Information that can b
 -   Evaluations verify specifications.
 -   Governance determines whether the completed feature is
     architecturally acceptable.
+-   Completing an assigned task does not by itself prove that the feature
+    Goal or Director Intent has been satisfied.
 
 ------------------------------------------------------------------------
 
@@ -199,6 +201,9 @@ The Planner agent:
 - records recommended future Work Files
 - initiates Governance Review
 - ensures completed features have a complete observable behavioral contract
+- reconciles completed task output against the Work File Goal, Director
+  Intent, Initial Architectural Review, prior Planner decisions, and
+  implementation observations before deciding what happens next
 
 The Planner agent owns task scope during the autonomous workflow. An
 implementation-authored specification, implementation observation, or
@@ -256,9 +261,59 @@ The Planner agent records the returned information in the Work File.
 
 ------------------------------------------------------------------------
 
+# Goal Reconciliation
+
+After each implementation task returns, the Planner agent must perform a goal
+reconciliation before deciding that the task is ready for evaluation or that
+the feature is ready for Governance Review.
+
+Goal reconciliation asks whether the completed observable behavior, together
+with already completed work, fully satisfies the Work File Goal and Director
+Intent when read through the Initial Architectural Review, prior Planner
+decisions, and governance principles.
+
+The Planner agent must not limit this check to whether the subagent completed
+the assigned task literally. Subagents are short-lived construction agents;
+their output reflects the scope they were given. If a subagent surfaces an
+omission, exclusion, implementation observation, or recommendation that affects
+the feature's stated purpose, the Planner agent treats that information as
+evidence for scope reconciliation, not as proof that the omitted behavior is
+optional.
+
+If the feature Goal or Director Intent includes qualitative observable outcomes
+such as variety, coverage, freshness, reliability, compatibility,
+configurability, safety, or usability, the Planner agent should identify the
+concrete observable behaviors needed to preserve those outcomes. If completed
+work can undermine one of those stated outcomes, the Planner agent should
+create current-scope work unless doing so would materially expand the
+Director's intended feature.
+
+Possible reconciliation outcomes:
+
+- The goal is satisfied for the current task and no new current-scope behavior
+  is implied. The Planner agent may proceed to evaluation for that task, or to
+  Governance Review when all tasks have completed successfully.
+- The goal is not yet satisfied because implied current-scope behavior is
+  missing. The Planner agent records why the goal remains incomplete, records
+  what was learned from the completed work or implementation observations,
+  updates the task plan, and returns to discovery or task decomposition before
+  spawning the next fresh implementation subagent.
+- The goal cannot be reconciled because the Work File Goal or Director Intent
+  is materially ambiguous or appears to conflict with governance or
+  architecture. The Planner agent records the ambiguity or conflict and seeks
+  Director input rather than guessing.
+
+When goal reconciliation creates or changes current-scope work, the Planner
+agent updates and commits the Work File before spawning the next subagent or
+ending the workflow.
+
+------------------------------------------------------------------------
+
 # Evaluation
 
-After a task implementation is complete, the Planner agent spawns a fresh evaluation-authoring subagent.
+After a task implementation is complete and goal reconciliation does not
+identify missing current-scope behavior for that task, the Planner agent
+spawns a fresh evaluation-authoring subagent.
 
 The evaluation-authoring subagent receives:
 
@@ -327,8 +382,15 @@ For each task:
 
 1. Spawn a fresh implementation subagent.
 2. Record the implementation results.
-3. Spawn a fresh evaluation subagent.
-4. Record the evaluation results.
+3. Perform goal reconciliation against the Work File Goal, Director Intent,
+   Initial Architectural Review, prior Planner decisions, and implementation
+   observations.
+4. If reconciliation shows that current-scope behavior is missing, update the
+   Work File, revise or add tasks, and return to discovery or task
+   decomposition before spawning the next implementation subagent.
+5. If reconciliation shows that the task is ready for verification, spawn a
+   fresh evaluation subagent.
+6. Record the evaluation results.
 
 If the evaluation fails:
 
@@ -378,6 +440,12 @@ A task is complete only when:
 When a task is complete:
 
 - Continue to the next incomplete task.
+
+Before initiating Governance Review, the Planner agent must perform one final
+goal reconciliation across all completed tasks. If the Work File Goal or
+Director Intent is not fully satisfied, the Planner agent records why, updates
+the task plan, and resumes the workflow from the next incomplete current-scope
+task instead of starting Governance Review.
 
 ------------------------------------------------------------------------
 
