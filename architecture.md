@@ -54,17 +54,36 @@ source defaults. This keeps Researcher, Curator, and Writer reusable across
 topics and presentations without changing source code.
 
 Researcher also supports provider-specific prompt paths through the optional
-`researcher_prompt_paths` profile field. When present, the configured
-Researcher provider selects its matching prompt path; otherwise Researcher uses
-the profile's `researcher_prompt_path`. This provider-specific prompt routing
-applies only to Researcher.
+`researcher_prompt_paths` profile field. This routing applies only to
+prompt-using Researcher providers. Gemini and OpenAI select the prompt path
+matching the configured Researcher provider when one is present; otherwise they
+use the profile's `researcher_prompt_path`. Bandcamp is source-backed and does
+not use Researcher prompt paths.
 
 Each stage declares a top-level `provider`. Model-backed providers require a
 `model` block with name and endpoint. Source-backed providers may omit model
 settings, prompts, and endpoints when the provider owns those details. Gemini
 and OpenAI are supported for Researcher and Curator stages; Bandcamp is
 supported for the Researcher stage; Ollama is currently supported for the
-Writer stage.
+Writer stage. Unsupported stage providers are rejected while configuration is
+loaded.
+
+Bandcamp Researcher stages may include a stage-level `discovery` block. When
+the block is omitted, Bandcamp uses its built-in default discovery criteria.
+When present, the configuration must contain only the supported Bandcamp
+Discover criteria fields. Integer fields are `category_id`, `geoname_id`,
+`time_facet_id`, and `size`; string fields are `slice` and `cursor`; list
+fields are `tag_norm_names` and `include_result_types`, and each list must
+contain non-empty strings. Missing, malformed, or unsupported Bandcamp
+discovery fields are rejected before a run starts. Discovery configuration is
+supported only for the Bandcamp Researcher provider; discovery configuration on
+model-backed Researcher providers is rejected before a run starts.
+
+Delivery configuration is loaded from the top-level `delivery` list. A delivery
+entry must declare a known provider and a boolean `enabled` flag. Disabled
+providers are ignored. Telegram is the currently implemented delivery provider.
+Malformed delivery configuration is rejected when the pipeline or configuration
+validation is assembled.
 
 Gemini-backed Researcher or Curator stage:
 
@@ -88,6 +107,19 @@ Bandcamp-backed Researcher stage:
 
 ```yaml
 provider: bandcamp
+discovery:
+  category_id: 0
+  tag_norm_names:
+    - hypnotic-techno
+    - techno
+  geoname_id: 0
+  slice: new
+  time_facet_id: 0
+  cursor: "*"
+  size: 24
+  include_result_types:
+    - a
+    - s
 ```
 
 Ollama-backed Writer stage:
@@ -116,6 +148,22 @@ delivery provider when applicable, and include artifact paths when available.
 The process exit code agrees with the reported JSON status. Incidental output
 from underlying stages may appear on standard error, but standard output is the
 machine-readable result surface for callers and monitoring tools.
+
+`--validate-config` loads and assembles the configured pipeline for the
+selected profile, or the configured default profile when none is selected, and
+then exits without running the pipeline. It reports a parseable JSON success or
+failure result to standard output. Validation checks profile selection, stage
+providers, required model settings, required prompt and template files,
+Bandcamp discovery configuration, and delivery configuration. It does not call
+Researcher, Curator, Writer, Delivery, or external providers; it does not write
+a ledger; and it does not attempt Telegram delivery.
+
+`--version` prints a single-line version report and exits successfully before
+configuration validation or pipeline execution. The current report is:
+
+```text
+infoPipeline 0.1.0
+```
 
 ## Writer Template Contract
 
@@ -171,6 +219,18 @@ Planner ──▶ Researcher ──▶ Curator ──▶ Writer
 Each stage is validated before the next runs. A failed check halts the
 pipeline at that stage rather than passing bad output forward.
 
+Researcher output exposes normalized items as the downstream contract. Provider
+metadata can differ by Researcher provider. Gemini-backed Researcher output
+includes normalized items, a `raw_provider_response` section with bounded
+provider/search context, and a `normalization` section that identifies grounded
+search URL provenance. Bandcamp-backed Researcher output includes normalized
+items, a `raw_provider_response` section with the endpoint, discovery request
+body, and bounded response preview, plus a `normalization` section identifying
+Bandcamp Discover URL provenance. OpenAI-backed Researcher output includes
+normalized items and available web-search metadata under `grounding_metadata`.
+Curator, Writer, and Delivery consume normalized items and do not require
+provider-specific metadata to operate.
+
 Delivery runs only after all configured stages have completed successfully.
 Delivery is recorded separately from stage results and does not generate,
 edit, rank, filter, or summarize the Writer's outbound message. Delivery
@@ -201,9 +261,10 @@ profile's ledger location with the current run.
 The ledger records the selected profile, stage status, stage output, validation
 reason, delivery outcomes, timestamps, and any stage diagnostic file path. When
 a stage raises an error or produces invalid output, best-effort diagnostic JSON
-files are written under that profile's diagnostics directory. Delivery failures
-are recorded as delivery outcomes in the ledger; they do not currently create
-stage diagnostic files.
+files are written under a dated directory below the selected profile's ledger
+directory, for example `output/<profile>/diagnostics/<YYYY-MM-DD>/`. Delivery
+failures are recorded as delivery outcomes in the ledger; they do not currently
+create stage diagnostic files.
 
 ```json
 {
