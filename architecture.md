@@ -47,7 +47,9 @@ configured provider.
 `config/pipeline.yaml` is the source of truth for the default pipeline. It
 defines stage order, selectable profiles, stage providers, provider-required
 model settings, and enabled delivery providers. A profile supplies prompt and
-template paths for providers that use prompts or templates.
+template paths for providers that use prompts or templates. More than one
+Researcher can be configured before Curator by repeating flat
+`name: researcher` entries in the top-level `stages` list.
 
 Prompt and template paths are supplied through configuration rather than Python
 source defaults. This keeps Researcher, Curator, and Writer reusable across
@@ -59,6 +61,14 @@ prompt-using Researcher providers. Gemini and OpenAI select the prompt path
 matching the configured Researcher provider when one is present; otherwise they
 use the profile's `researcher_prompt_path`. Bandcamp is source-backed and does
 not use Researcher prompt paths.
+
+When repeated Researcher stages appear consecutively before Curator, each
+Researcher runs independently with its own provider configuration. Successful
+Researcher item lists are combined in configured stage order, then duplicate
+items with the same normalized URL are removed while preserving the earliest
+occurrence. Curator receives one provider-neutral Researcher output containing
+the deduplicated `items` list. A single configured Researcher continues through
+the original one-stage behavior.
 
 Each stage declares a top-level `provider`. Model-backed providers require a
 `model` block with name and endpoint. Source-backed providers may omit model
@@ -120,6 +130,45 @@ discovery:
   include_result_types:
     - a
     - s
+```
+
+Repeated flat Researcher stages:
+
+```yaml
+stages:
+  - name: researcher
+    provider: bandcamp
+    discovery:
+      category_id: 0
+      tag_norm_names:
+        - hypnotic-techno
+      geoname_id: 0
+      slice: new
+      time_facet_id: 0
+      cursor: "*"
+      size: 24
+      include_result_types:
+        - a
+        - s
+  - name: researcher
+    provider: bandcamp
+    discovery:
+      category_id: 0
+      tag_norm_names:
+        - dub-techno
+      geoname_id: 0
+      slice: new
+      time_facet_id: 0
+      cursor: "*"
+      size: 24
+      include_result_types:
+        - a
+        - s
+  - name: curator
+    provider: openai
+    model:
+      name: gpt-4.1-mini
+      endpoint: https://api.openai.com/v1/responses
 ```
 
 Ollama-backed Writer stage:
@@ -265,6 +314,12 @@ files are written under a dated directory below the selected profile's ledger
 directory, for example `output/<profile>/diagnostics/<YYYY-MM-DD>/`. Delivery
 failures are recorded as delivery outcomes in the ledger; they do not currently
 create stage diagnostic files.
+
+When a run uses repeated Researcher stages, the ledger keeps their outcomes
+readable with numbered Researcher stage records such as `researcher` and
+`researcher_2`. If all individual Researchers succeed but the deduplicated
+candidate pool is invalid, the run fails before Curator and records the
+combined validation failure separately.
 
 ```json
 {

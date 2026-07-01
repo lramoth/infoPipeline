@@ -26,6 +26,20 @@ stages:
       include_result_types:
         - a
         - s
+  - name: researcher
+    provider: bandcamp
+    discovery:
+      category_id: 0
+      tag_norm_names:
+        - dub-techno
+      geoname_id: 0
+      slice: new
+      time_facet_id: 0
+      cursor: "*"
+      size: 24
+      include_result_types:
+        - a
+        - s
   - name: curator
     provider: openai
     model:

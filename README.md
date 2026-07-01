@@ -57,3 +57,11 @@ Source-backed Researcher providers can also declare stage-level discovery
 criteria. The checked-in Bandcamp Researcher configuration uses `discovery` to
 describe its Bandcamp Discover collection criteria; omitting that block keeps
 the provider's default discovery behavior.
+
+More than one Researcher can run before Curator by repeating flat
+`name: researcher` entries in the top-level `stages` list. Each Researcher uses
+its own provider configuration. The normalized items from successful repeated
+Researchers are combined in stage order, duplicate URLs keep the first
+occurrence, and Curator receives one candidate pool. Do not nest Researcher
+instances under fields such as `researcher.instances`, `researcher.providers`,
+or `discovery_sources`.

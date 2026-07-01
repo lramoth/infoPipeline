@@ -14,7 +14,13 @@ from typing import Any, Callable, Iterable
 
 from delivery import DeliveryResult
 from diagnostics import write_diagnostic
-from pipeline_config import load_delivery_config, load_pipeline, profile_ledger_path, resolve_profile_name
+from pipeline_config import (
+    load_delivery_config,
+    load_pipeline,
+    profile_ledger_path,
+    resolve_profile_name,
+)
+from researcher import Researcher
 
 
 ValidationResult = tuple[bool, str]
@@ -79,9 +85,20 @@ class Planner:
         ledger = self._load_ledger(today)
         previous_output: Any = None
 
-        for index, stage in enumerate(self.stages):
+        index = 0
+        while index < len(self.stages):
             output: Any = None
+            stage = self.stages[index]
             stage_name = self._stage_name(stage)
+            if stage_name == "researcher" and self._next_stage_is_researcher(index):
+                result, previous_output, index = self._run_researcher_group(
+                    ledger,
+                    index,
+                )
+                if result is not None:
+                    return result
+                continue
+
             stage_input = None if index == 0 else previous_output
             try:
                 output = self._run_stage(stage, stage_input, index == 0)
@@ -109,6 +126,7 @@ class Planner:
             if not passed:
                 return RunResult(False, output, stage_name, reason)
             previous_output = output
+            index += 1
 
         delivery_results = self._deliver(ledger, previous_output)
         failed_delivery = next(
@@ -125,6 +143,112 @@ class Planner:
             )
 
         return RunResult(True, previous_output, delivery_results=delivery_results)
+
+    def _run_researcher_group(
+        self,
+        ledger: dict[str, Any],
+        start_index: int,
+    ) -> tuple[RunResult | None, Any, int]:
+        researcher_stages = self._researcher_group(start_index)
+        outputs = []
+        for group_index, stage in enumerate(researcher_stages, start=1):
+            output: Any = None
+            stage_name = self._numbered_researcher_stage_name(group_index)
+            try:
+                output = self._run_stage(stage, None, True)
+                passed, reason = self._validate_stage(stage, output, None)
+            except Exception as error:
+                reason = f"{type(error).__name__}: {error}"
+                diagnostic_path = self._write_failure_diagnostic(
+                    stage_name,
+                    error,
+                    reason,
+                    output=output,
+                )
+                self._record(
+                    ledger,
+                    stage_name,
+                    "failed",
+                    output,
+                    reason,
+                    diagnostic_path,
+                )
+                return RunResult(False, output, stage_name, reason), output, start_index
+
+            status = "done" if passed else "failed"
+            diagnostic_path = None
+            if not passed:
+                diagnostic_path = self._write_validation_diagnostic(
+                    stage_name,
+                    reason,
+                    output,
+                )
+            self._record(ledger, stage_name, status, output, reason, diagnostic_path)
+            if not passed:
+                return RunResult(False, output, stage_name, reason), output, start_index
+            outputs.append(output)
+
+        combined_output = self._combined_researcher_output(outputs)
+        passed, reason = Researcher.validate(combined_output)
+        if not passed:
+            stage_name = "researcher_combined"
+            diagnostic_path = self._write_validation_diagnostic(
+                stage_name,
+                reason,
+                combined_output,
+            )
+            self._record(
+                ledger,
+                stage_name,
+                "failed",
+                combined_output,
+                reason,
+                diagnostic_path,
+            )
+            return (
+                RunResult(False, combined_output, stage_name, reason),
+                combined_output,
+                start_index,
+            )
+
+        return None, combined_output, start_index + len(researcher_stages)
+
+    def _researcher_group(self, start_index: int) -> list[Any]:
+        group = []
+        index = start_index
+        while (
+            index < len(self.stages)
+            and self._stage_name(self.stages[index]) == "researcher"
+        ):
+            group.append(self.stages[index])
+            index += 1
+        return group
+
+    def _next_stage_is_researcher(self, index: int) -> bool:
+        next_index = index + 1
+        return (
+            next_index < len(self.stages)
+            and self._stage_name(self.stages[next_index]) == "researcher"
+        )
+
+    def _numbered_researcher_stage_name(self, group_index: int) -> str:
+        if group_index == 1:
+            return "researcher"
+        return f"researcher_{group_index}"
+
+    def _combined_researcher_output(self, outputs: list[Any]) -> dict[str, Any]:
+        combined_items = []
+        seen_urls = set()
+        for output in outputs:
+            if not isinstance(output, dict) or not isinstance(output.get("items"), list):
+                continue
+            for item in output["items"]:
+                url = item.get("url") if isinstance(item, dict) else None
+                if not url or url in seen_urls:
+                    continue
+                combined_items.append(item)
+                seen_urls.add(url)
+        return {"items": combined_items}
 
     def _load_ledger(self, today: str) -> dict[str, Any]:
         ledger = {"date": today, "stages": {}}

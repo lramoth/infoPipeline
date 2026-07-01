@@ -374,6 +374,53 @@ stages:
             },
         )
 
+    def test_repeated_bandcamp_researchers_receive_separate_discovery(self):
+        self.write_config(
+            """default_profile: sample
+profiles:
+  sample:
+    curator_prompt_path: prompts/curators/taste_filter.md
+    writer_prompt_path: prompts/writers/message_prompt.md
+    writer_template_path: prompts/writers/message_layout.md
+stages:
+  - name: researcher
+    provider: bandcamp
+    discovery:
+      category_id: 0
+      tag_norm_names:
+        - hypnotic-techno
+      geoname_id: 0
+      slice: new
+      time_facet_id: 0
+      cursor: "*"
+      size: 24
+      include_result_types:
+        - a
+        - s
+  - name: researcher
+    provider: bandcamp
+    discovery:
+      category_id: 0
+      tag_norm_names:
+        - dub-techno
+      geoname_id: 0
+      slice: new
+      time_facet_id: 0
+      cursor: "*"
+      size: 24
+      include_result_types:
+        - a
+        - s
+"""
+        )
+
+        stages = load_pipeline()
+
+        self.assertEqual([stage.provider for stage in stages], ["bandcamp", "bandcamp"])
+        self.assertEqual(stages[0].discovery["tag_norm_names"], ["hypnotic-techno"])
+        self.assertEqual(stages[1].discovery["tag_norm_names"], ["dub-techno"])
+        self.assertIsNot(stages[0].discovery, stages[1].discovery)
+
     def test_bandcamp_discovery_must_be_complete_and_well_formed(self):
         self.write_config(
             """default_profile: sample
@@ -868,11 +915,17 @@ class DefaultPipelineConfigTests(unittest.TestCase):
     def test_default_config_defines_required_stage_order_and_prompts(self):
         stages = load_pipeline(self.selected_checked_in_profile())
 
-        self.assertEqual([type(stage) for stage in stages], [Researcher, Curator, Writer])
+        self.assertEqual(
+            [type(stage) for stage in stages],
+            [Researcher, Researcher, Curator, Writer],
+        )
         for stage in stages:
             if getattr(stage, "prompt_path", None) is not None:
                 self.assertTrue(stage.prompt_path.is_file())
-        self.assertTrue(stages[2].template_path.is_file())
+        self.assertEqual(stages[0].provider, "bandcamp")
+        self.assertEqual(stages[1].provider, "bandcamp")
+        self.assertNotEqual(stages[0].discovery, stages[1].discovery)
+        self.assertTrue(stages[3].template_path.is_file())
 
     def test_checked_in_default_profile_is_internally_consistent_when_declared(self):
         config = yaml.safe_load(pipeline_config.CONFIG_PATH.read_text(encoding="utf-8"))

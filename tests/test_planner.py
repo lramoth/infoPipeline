@@ -135,6 +135,163 @@ class PlannerTests(unittest.TestCase):
             ],
         )
 
+    def test_multiple_researchers_are_combined_and_deduplicated_before_curator(self):
+        events = []
+        first_items = [
+            {"title": "First A", "url": "https://example.com/a", "summary": "a"},
+            {"title": "First B", "url": "https://example.com/b", "summary": "b"},
+            {"title": "First C", "url": "https://example.com/c", "summary": "c"},
+        ]
+        second_items = [
+            {
+                "title": "Second duplicate",
+                "url": "https://example.com/b",
+                "summary": "duplicate",
+            },
+            {"title": "Second D", "url": "https://example.com/d", "summary": "d"},
+            {"title": "Second E", "url": "https://example.com/e", "summary": "e"},
+        ]
+
+        def researcher_validate(output):
+            return Researcher.validate(output)
+
+        def curator_run(research_output):
+            events.append(("curator input", research_output))
+            return research_output["items"]
+
+        result = Planner(
+            [
+                Stage(
+                    "researcher",
+                    lambda: {"items": first_items},
+                    researcher_validate,
+                ),
+                Stage(
+                    "researcher",
+                    lambda: {"items": second_items},
+                    researcher_validate,
+                ),
+                Stage("curator", curator_run, lambda output: (True, "passed")),
+            ],
+            self.ledger_path,
+        ).run()
+
+        self.assertTrue(result.succeeded)
+        self.assertEqual(
+            events,
+            [
+                (
+                    "curator input",
+                    {
+                        "items": [
+                            first_items[0],
+                            first_items[1],
+                            first_items[2],
+                            second_items[1],
+                            second_items[2],
+                        ]
+                    },
+                )
+            ],
+        )
+        ledger = self.read_ledger()
+        self.assertEqual(
+            list(ledger["stages"]),
+            ["researcher", "researcher_2", "curator"],
+        )
+        self.assertEqual(
+            ledger["stages"]["researcher"]["output"],
+            {"items": first_items},
+        )
+        self.assertEqual(
+            ledger["stages"]["researcher_2"]["output"],
+            {"items": second_items},
+        )
+
+    def test_repeated_researcher_failure_halts_before_later_researchers_and_curator(self):
+        events = []
+        valid_items = [
+            {"title": "A", "url": "https://example.com/a", "summary": "a"},
+            {"title": "B", "url": "https://example.com/b", "summary": "b"},
+            {"title": "C", "url": "https://example.com/c", "summary": "c"},
+        ]
+
+        def failing_researcher():
+            events.append("second researcher")
+            raise RuntimeError("provider unavailable")
+
+        def later_researcher():
+            events.append("third researcher")
+            return {"items": valid_items}
+
+        def curator_run(research_output):
+            events.append("curator")
+            return research_output
+
+        result = Planner(
+            [
+                Stage("researcher", lambda: {"items": valid_items}, Researcher.validate),
+                Stage("researcher", failing_researcher, Researcher.validate),
+                Stage("researcher", later_researcher, Researcher.validate),
+                Stage("curator", curator_run, lambda output: (True, "passed")),
+            ],
+            self.ledger_path,
+        ).run()
+
+        self.assertFalse(result.succeeded)
+        self.assertEqual(result.failed_stage, "researcher_2")
+        self.assertIn("provider unavailable", result.reason)
+        self.assertEqual(events, ["second researcher"])
+        ledger = self.read_ledger()
+        self.assertEqual(list(ledger["stages"]), ["researcher", "researcher_2"])
+        self.assertEqual(ledger["stages"]["researcher_2"]["status"], "failed")
+        self.assertNotIn("curator", ledger["stages"])
+
+    def test_repeated_researchers_fail_before_curator_when_unique_pool_is_too_small(self):
+        ran_curator = False
+        first_items = [
+            {"title": "A", "url": "https://example.com/a", "summary": "a"},
+            {"title": "B", "url": "https://example.com/b", "summary": "b"},
+            {"title": "C", "url": "https://example.com/c", "summary": "c"},
+        ]
+        second_items = [
+            {"title": "A again", "url": "https://example.com/a", "summary": "again"},
+            {"title": "B again", "url": "https://example.com/b", "summary": "again"},
+            {"title": "C again", "url": "https://example.com/c", "summary": "again"},
+        ]
+
+        def permissive_validate(output):
+            return True, "stage output accepted"
+
+        def curator_run(research_output):
+            nonlocal ran_curator
+            ran_curator = True
+            return research_output
+
+        result = Planner(
+            [
+                Stage("researcher", lambda: {"items": first_items[:2]}, permissive_validate),
+                Stage(
+                    "researcher",
+                    lambda: {"items": second_items[:2]},
+                    permissive_validate,
+                ),
+                Stage("curator", curator_run, lambda output: (True, "passed")),
+            ],
+            self.ledger_path,
+        ).run()
+
+        self.assertFalse(result.succeeded)
+        self.assertEqual(result.failed_stage, "researcher_combined")
+        self.assertIn("fewer than 3 items", result.reason)
+        self.assertFalse(ran_curator)
+        ledger = self.read_ledger()
+        self.assertEqual(
+            list(ledger["stages"]),
+            ["researcher", "researcher_2", "researcher_combined"],
+        )
+        self.assertEqual(ledger["stages"]["researcher_combined"]["status"], "failed")
+
     def test_delivery_runs_after_writer_success_with_writer_output(self):
         events = []
 
