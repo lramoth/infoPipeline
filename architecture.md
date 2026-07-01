@@ -1,137 +1,72 @@
 # Architecture — infoPipeline
 
-## System Purpose
+## What this system does
+A single-run pipeline, designed for scheduled invocation, that collects
+candidate items from a configured Researcher provider, curates the results down
+to what's actually worth seeing by applying the configured taste profile,
+formats the result into a clean outbound message, and delivers it via the
+configured delivery providers.
 
-infoPipeline is a command-line, single-run information pipeline designed for
-manual or scheduled invocation.
+## Components
 
-One invocation:
+The default pipeline is assembled from `config/pipeline.yaml`, which defines
+stage order, selectable profiles, model settings, and enabled delivery
+providers. Each profile supplies the prompt and template paths for one topic.
+The current default profile is `techno-releases`; its default stage path uses
+Bandcamp for Researcher collection, OpenAI for Curator ranking/filtering,
+Ollama for Writer prose generation, and Telegram delivery when enabled.
 
-1. collects candidate items through a configured Researcher provider;
-2. curates the candidates according to the configured profile;
-3. formats the selected items into an outbound message;
-4. records the run;
-5. delivers the message through enabled delivery providers.
+Five conceptual pieces make up the configured pipeline. Planner and Delivery
+are plain code. Curator and Writer are model-backed in the default pipeline;
+Researcher may be model-backed or source-backed depending on its configured
+provider.
 
-The system is optimized for clear stage boundaries, configurable runtime
-behavior, observable command-line results, and controlled failure handling.
+- **Planner** (pure Python — no LLM) — coordinates the pipeline. Reads and
+  writes a JSON task ledger, validates each stage's output before
+  advancing to the next, and records the run outcome. It is designed to be
+  started manually or by an external scheduling mechanism.
+- **Researcher** (configured collection provider) — finds raw candidate items
+  through the configured provider. Gemini and OpenAI are supported as
+  search-capable model providers; Bandcamp is supported as a source-backed
+  discovery provider. Researcher exposes normalized candidate items to later
+  stages regardless of provider.
+- **Curator** (configured model provider) — uses a configured prompt to rank
+  and filter the researcher's raw items. Gemini and OpenAI are supported
+  providers. Validation checks that the curated output has required fields and
+  includes a rank 1 item.
+- **Writer** (configured provider, currently local `gemma4:e4b` via Ollama) —
+  formats the curator's ranked list into the final outbound message. The model
+  generates item prose; Python assembles the final message from the configured
+  template and curator titles/URLs.
+- **Delivery** (plain Python) — transports the final outbound message to
+  enabled delivery providers after all configured stages succeed. Telegram is
+  the currently implemented provider.
 
-## Architectural Invariants
+## Configuration
 
-- `config/pipeline.yaml` is the source of truth for the default configured
-  pipeline.
-- `planner.py` is the command-line entry point.
-- Planner coordinates stages and validates outputs; it does not perform model
-  reasoning.
-- Researcher collects candidates and normalizes them.
-- Curator ranks and filters candidates.
-- Writer assembles the outbound message.
-- Delivery transports the completed message after all configured stages
-  succeed.
-- Each stage is validated before the next stage runs.
-- A failed stage halts later stages and delivery.
-- Delivery failure is recorded as delivery failure, not as Writer failure.
-- Standard output is the machine-readable command result surface.
-- Diagnostics and errors must not expose API keys, authentication headers,
-  tokens, chat IDs, or environment values.
+`config/pipeline.yaml` is the source of truth for the default pipeline. It
+defines stage order, selectable profiles, stage providers, provider-required
+model settings, and enabled delivery providers. A profile supplies prompt and
+template paths for providers that use prompts or templates.
 
-## Runtime Components
+Prompt and template paths are supplied through configuration rather than Python
+source defaults. This keeps Researcher, Curator, and Writer reusable across
+topics and presentations without changing source code.
 
-### Planner
+Researcher also supports provider-specific prompt paths through the optional
+`researcher_prompt_paths` profile field. When present, the configured
+Researcher provider selects its matching prompt path; otherwise Researcher uses
+the profile's `researcher_prompt_path`. This provider-specific prompt routing
+applies only to Researcher.
 
-Planner is plain Python. It loads configuration, selects the profile, assembles
-the configured pipeline, coordinates execution, validates stage outputs,
-records the ledger, and reports command results.
+Each stage declares a top-level `provider`. Model-backed providers require a
+`model` block with name and endpoint. Source-backed providers may omit model
+settings, prompts, and endpoints when the provider owns those details. Gemini
+and OpenAI are supported for Researcher and Curator stages; Bandcamp is
+supported for the Researcher stage; Ollama is currently supported for the
+Writer stage.
 
-Planner owns pipeline control flow. It does not own provider-specific search,
-ranking, prose generation, delivery transport, or external scheduling.
-
-### Researcher
-
-Researcher finds raw candidate items through the configured provider and
-returns normalized items for later stages.
-
-Supported providers:
-
-- Gemini as a model-backed search provider;
-- OpenAI as a model-backed search provider;
-- Bandcamp as a source-backed discovery provider.
-
-Researcher output must contain an item list whose complete items have title,
-URL, and summary. Existing validation requires enough complete items before
-the pipeline can continue.
-
-Model-backed Researcher providers use configured prompts. Source-backed
-Researcher providers may use provider-specific discovery configuration while
-still owning source interaction, normalization, diagnostics, and error
-handling.
-
-### Curator
-
-Curator is model-backed. It applies the configured profile prompt to Researcher
-items and returns ranked, filtered candidates.
-
-Supported providers:
-
-- Gemini;
-- OpenAI.
-
-Curator validation requires the documented curated fields and a rank 1 item.
-
-### Writer
-
-Writer uses the configured provider to produce per-item prose and Python logic
-to assemble the final outbound message from the configured template.
-
-The current supported Writer provider is local Ollama with model
-`gemma4:e4b`.
-
-Curator output remains authoritative for item titles, source URLs, and rank
-order. Writer model output supplies item notes only.
-
-### Delivery
-
-Delivery sends the final outbound message through enabled delivery providers
-after all configured stages succeed.
-
-The currently implemented delivery provider is Telegram.
-
-Delivery does not generate, edit, rank, filter, or summarize the Writer's
-message. Delivery outcomes are recorded separately from stage outcomes.
-
-## Configuration Contracts
-
-`config/pipeline.yaml` defines:
-
-- default profile;
-- selectable profiles;
-- stage order;
-- stage providers;
-- model settings required by model-backed providers;
-- prompt and template paths;
-- source-backed discovery settings where supported;
-- enabled delivery providers;
-- profile-specific ledger and diagnostics locations.
-
-When no profile is selected, the configured default profile is used.
-
-Profile-specific runs write to profile-specific ledger locations so separate
-scheduled jobs do not overwrite one another.
-
-### Stage Providers
-
-Each stage declares a top-level `provider`.
-
-Model-backed Researcher and Curator providers require:
-
-```yaml
-provider: openai
-model:
-  name: gpt-4.1-mini
-  endpoint: https://api.openai.com/v1/responses
-```
-
-or:
+Gemini-backed Researcher or Curator stage:
 
 ```yaml
 provider: gemini
@@ -140,7 +75,22 @@ model:
   endpoint: https://generativelanguage.googleapis.com/v1beta/models
 ```
 
-The Writer currently supports:
+OpenAI-backed Researcher or Curator stage:
+
+```yaml
+provider: openai
+model:
+  name: gpt-4.1-mini
+  endpoint: https://api.openai.com/v1/responses
+```
+
+Bandcamp-backed Researcher stage:
+
+```yaml
+provider: bandcamp
+```
+
+Ollama-backed Writer stage:
 
 ```yaml
 provider: ollama
@@ -149,119 +99,31 @@ model:
   endpoint: http://localhost:11434/api/generate
 ```
 
-Bandcamp is supported only for Researcher and may omit model settings because
-it is source-backed.
+Callers may select a profile when invoking the command-line entry point. When
+no profile is selected, the configured `default_profile` is used. Profile runs
+write to profile-specific ledger locations so separate scheduled jobs do not
+overwrite each other's same-day run records.
 
-### Prompt and Template Paths
+## Command-line result
 
-Prompt and template paths are configured rather than hardcoded into stage
-source code.
+Each command-line invocation runs one pipeline pass and prints one parseable
+JSON result object to standard output. Successful results report success,
+include a readable summary, identify the selected profile when known, include
+the final pipeline output, and point to the ledger path. Failed results report
+failure, include a readable summary and reason, identify the failed stage or
+delivery provider when applicable, and include artifact paths when available.
 
-A profile supplies the prompt and template paths for its topic. Researcher also
-supports provider-specific prompt paths through optional
-`researcher_prompt_paths`. When present, the configured Researcher provider
-selects its matching prompt path. Otherwise it uses the profile's
-`researcher_prompt_path`.
-
-Provider-specific prompt routing applies only to Researcher.
-
-### Bandcamp Discovery
-
-Bandcamp Researcher may accept optional stage-level `discovery`
-configuration:
-
-```yaml
-provider: bandcamp
-discovery:
-  category_id: 0
-  tag_norm_names:
-    - hypnotic-techno
-    - techno
-  geoname_id: 0
-  slice: new
-  time_facet_id: 0
-  cursor: "*"
-  size: 24
-  include_result_types:
-    - a
-    - s
-```
-
-Accepted Bandcamp discovery fields:
-
-- integer: `category_id`, `geoname_id`, `time_facet_id`, `size`;
-- non-empty string: `slice`, `cursor`;
-- non-empty list of non-empty strings: `tag_norm_names`,
-  `include_result_types`.
-
-Bandcamp discovery configuration accepts only these documented fields.
-Unsupported fields are rejected during configuration loading.
-
-When Bandcamp discovery is omitted, the existing default Bandcamp discovery
-behavior is used.
-
-Discovery configuration is rejected for model-backed Researcher providers,
-which continue to use prompts for discovery behavior.
-
-## Command-Line Interface
-
-`planner.py` handles either one configured pipeline run or an application-level
-command that exits before stages run.
-
-Supported arguments:
-
-- `--profile <profile_name>` selects the configured profile to run or validate.
-- `--validate-config` loads and assembles the selected or default profile and
-  reports whether configuration validation succeeded without running stages.
-- `--version` prints the application name and version and exits successfully.
-  When combined with other supported options, `--version` takes precedence.
-
-Normal run:
-
-```text
-python3 planner.py
-python3 planner.py --profile techno-releases
-```
-
-Configuration validation:
-
-```text
-python3 planner.py --validate-config
-python3 planner.py --validate-config --profile techno-releases
-```
-
-Version:
-
-```text
-python3 planner.py --version
-```
-
-Normal pipeline runs and configuration validation print one parseable JSON
-result object to standard output. The process exit code agrees with the JSON
-status.
-
-Incidental provider or diagnostic output may appear on standard error, but
-standard output remains the machine-readable result surface.
-
-`--validate-config` validates profile selection, stage configuration, required
-model settings, enabled delivery configuration, and configured prompt/template
-paths. It does not run providers, call the network, write a ledger, or send
-delivery messages.
+The process exit code agrees with the reported JSON status. Incidental output
+from underlying stages may appear on standard error, but standard output is the
+machine-readable result surface for callers and monitoring tools.
 
 ## Writer Template Contract
 
-Writer templates are markdown files with a message-level section containing
-`{items}` and an item-level section introduced by `# Item Template`.
-
-The message-level section may optionally start with `# Message Template`.
-
-The item-level section must include:
-
-- `{title}`;
-- `{note}`;
-- `{url}`.
-
-Example:
+Writer uses a markdown template to assemble the final outbound message. The
+template has a message-level section containing `{items}` and an item-level
+section introduced by `# Item Template`. The message-level section may
+optionally start with `# Message Template`. The item-level section must include
+`{title}`, `{note}`, and `{url}`.
 
 ```markdown
 Daily briefing
@@ -278,60 +140,70 @@ Source:
 {url}
 ```
 
-Python assembles the final message from the configured template, Curator
-titles, Curator URLs, Curator rank order, and Writer notes.
+Curator output remains authoritative for item titles, source URLs, and rank
+order. The configured Writer model supplies only per-item prose used as
+`{note}`. The Writer expects one note per curated item, and Python assembles the
+final message from the configured template.
 
-## Data Flow
+## Data flow
 
-```text
-Invocation
-    |
-    v
-Configuration load and profile selection
-    |
-    v
-Planner
-    |
-    v
-Researcher -> validate candidate items
-    |
-    v
-Curator -> validate ranked curated items
-    |
-    v
-Writer -> validate final message coverage
-    |
-    v
-Ledger update
-    |
-    v
-Delivery through enabled providers
-    |
-    v
-Command result on stdout
+```
+Scheduled invocation
+     │
+     ▼
+Planner ──▶ Researcher ──▶ Curator ──▶ Writer
+              │              │           │
+              ▼              ▼           ▼
+         Validate      Validate      Validate
+         ≥3 items      required      every item
+         with title,   fields and    appears in
+         URL, summary  rank 1        rank order
+              │              │           │
+              └──────────────┴───────────┘
+                          │
+                          ▼
+                  Planner records stages
+                          │
+                          ▼
+          Delivery sends via enabled providers
 ```
 
-Each validation step must pass before the next stage runs. Invalid output is
-recorded with a readable reason and halts the pipeline.
+Each stage is validated before the next runs. A failed check halts the
+pipeline at that stage rather than passing bad output forward.
 
-## Ledger and Diagnostics
+Delivery runs only after all configured stages have completed successfully.
+Delivery is recorded separately from stage results and does not generate,
+edit, rank, filter, or summarize the Writer's outbound message. Delivery
+failure is reported separately from stage failure and does not change the
+recorded Writer output or turn a successful Writer stage into a failed stage.
+
+## External dependencies
+
+- **Gemini API** — supported provider for Researcher search results and Curator
+  ranking/filtering.
+- **OpenAI API** — supported provider for Researcher search results and Curator
+  ranking/filtering.
+- **Bandcamp Discover API** — supported source-backed provider for Researcher
+  candidate collection.
+- **Ollama (local)** — supported provider for Writer item prose generation.
+- **Telegram Bot API** — currently implemented delivery provider.
+- **Local `.env` file** — contains provider and delivery settings such as
+  `GEMINI_API_KEY`, `OPENAI_API_KEY`, `TELEGRAM_BOT_TOKEN`, and
+  `TELEGRAM_CHAT_ID`.
+
+## Ledger
 
 Each configured invocation writes the current ledger for the selected profile.
-Re-running the same profile updates that profile's ledger location with the
-current run.
+Different profiles use separate ledger locations so separate scheduled jobs do
+not overwrite each other's records. Re-running the same profile updates that
+profile's ledger location with the current run.
 
-The ledger records:
-
-- run date;
-- selected profile;
-- stage statuses;
-- stage outputs;
-- validation reasons;
-- timestamps;
-- diagnostic file paths when available;
-- delivery outcomes.
-
-Representative shape:
+The ledger records the selected profile, stage status, stage output, validation
+reason, delivery outcomes, timestamps, and any stage diagnostic file path. When
+a stage raises an error or produces invalid output, best-effort diagnostic JSON
+files are written under that profile's diagnostics directory. Delivery failures
+are recorded as delivery outcomes in the ledger; they do not currently create
+stage diagnostic files.
 
 ```json
 {
@@ -339,88 +211,32 @@ Representative shape:
   "profile": "<profile_name>",
   "stages": {
     "<stage_name>": {
-      "status": "done",
-      "output": "<stage output>",
-      "validation_reason": "<reason>",
+      "status": "done" | "failed",
+      "output": "<whatever the stage returned>",
+      "validation_reason": "<why it passed or failed>",
       "timestamp": "<ISO 8601>",
-      "diagnostic_path": "<optional diagnostic path>"
+      "diagnostic_path": "<optional path to a diagnostic record>"
     }
   },
   "delivery": {
     "<provider_name>": {
       "provider": "<provider_name>",
-      "status": "done",
-      "reason": "<delivery result>",
+      "status": "done" | "failed",
+      "reason": "<delivery result or failure reason>",
       "timestamp": "<ISO 8601>"
     }
   }
 }
 ```
 
-When a stage raises an error or produces invalid output, best-effort diagnostic
-JSON files are written under that profile's diagnostics directory.
+## Runtime
 
-Delivery failures are recorded as delivery outcomes. They do not currently
-create stage diagnostic files.
+`planner.py` is the command-line entry point and runs one pipeline pass per
+invocation. It may be started manually or by any external scheduling mechanism,
+provided the configured environment, working directory, and provider credentials
+are available at run time.
 
-## External Dependencies
-
-Runtime dependencies:
-
-- Gemini API for supported Researcher and Curator model-backed behavior;
-- OpenAI API for supported Researcher and Curator model-backed behavior;
-- Bandcamp Discover for source-backed Researcher discovery;
-- Ollama local endpoint for Writer prose generation;
-- Telegram Bot API for delivery;
-- local `.env` values for provider and delivery credentials.
-
-Implementation and local tests should avoid live external calls unless the
-active Work File explicitly requires them. Evaluation uses controlled endpoints
-or fixtures by default.
-
-## Failure Model
-
-Configuration loading failures occur before stages run.
-
-Stage failures halt the pipeline at the failed stage. Later stages do not run.
-
-Delivery runs only after all configured stages have completed successfully.
-Delivery failure is recorded separately and does not alter the Writer output or
-turn the Writer stage into a failed stage.
-
-Readable failure reasons should be exposed through command results, ledger
-entries, or diagnostics as appropriate. Failure reporting must not expose
-secrets.
-
-## Change Impact Guide
-
-Use this guide during Discovery:
-
-- CLI changes affect command results, exit codes, stdout/stderr contracts, and
-  operator docs.
-- Configuration changes affect loading, validation, examples, and
-  `--validate-config`.
-- Researcher changes affect candidate item contracts, provider boundaries,
-  diagnostics, and Curator inputs.
-- Curator changes affect ranking/filtering contracts and Writer inputs.
-- Writer changes affect template contracts, outbound message shape, and
-  delivery inputs.
-- Delivery changes affect external side effects and delivery ledger outcomes.
-- Ledger changes affect diagnostics, monitoring, and scheduled-run
-  observability.
-- Provider changes affect credentials, network calls, failure modes, and
-  secret handling.
-
-## Scheduling and Operation
-
-The application does not own scheduling. External scheduling is responsible for
-starting `planner.py` with the configured working directory, environment, and
-credentials.
-
-Schedulers and operators should observe:
-
-- process exit status;
-- standard output JSON result;
-- standard error incidental output;
-- profile ledger;
-- diagnostic artifacts.
+All decision-making lives in plain Python (`planner.py`) and direct provider
+API calls. External scheduling is responsible only for starting runs and
+observing their process status, standard output, standard error, and any
+configured artifacts.
