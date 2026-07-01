@@ -1,0 +1,219 @@
+# Lightweight Autonomous Development Workflow
+
+## Purpose
+
+This workflow automates the Director's existing engineering handoffs without
+creating a separate software engineering methodology.
+
+The workflow preserves:
+
+- independent implementation
+- independent evaluation
+- durable feature history
+- clear separation of responsibilities
+
+The Director remains responsible for feature selection and final acceptance.
+
+## Artifact Locations
+
+- `work/` contains Director requests and the Planner Agent's durable execution
+  record for each feature.
+- `specs/` contains Planner Agent-authored behavioral specifications.
+- `evals/` contains Planner Agent-authored evaluation specifications.
+
+The Work File is the durable record for a feature. Existing `eval_log.md`
+history may remain in the repository, but it is not part of the active
+workflow and is not updated for new work.
+
+## Roles
+
+### Director
+
+The Director defines the desired feature through a Work File.
+
+The Director provides:
+
+- the feature title
+- the desired observable behavior
+- any required public interfaces
+- any explicit non-negotiable requirements
+- optional Director intent
+
+The Director does not write specifications, implementation plans, or
+evaluations.
+
+The Director accepts, rejects, or requests additional work after reviewing the
+completed Work File.
+
+### Planner Agent
+
+The Planner Agent owns engineering coordination.
+
+The Planner Agent is responsible for:
+
+- understanding the requested feature
+- reviewing the architecture
+- identifying assumptions
+- identifying implementation risks
+- creating an implementation plan
+- writing the behavioral specification
+- coordinating implementation
+- recording implementation observations
+- recording assumptions, limitations, and future work
+- writing the evaluation specification
+- coordinating independent evaluation
+- recording evaluation results
+- summarizing the completed work
+
+The Planner Agent never implements code.
+
+The Planner Agent never evaluates its own implementation.
+
+### Implementation Agent
+
+The Implementation Agent reads:
+
+- `AGENTS.md`
+- `architecture.md`
+- the Planner Agent's specification
+
+The Implementation Agent is responsible for:
+
+- implementing the specification
+- executing appropriate tests
+- reporting implementation observations
+- reporting assumptions
+- reporting limitations
+- reporting future work recommendations
+
+The Implementation Agent does not evaluate correctness against the
+specification.
+
+### Evaluation Agent
+
+The Evaluation Agent runs in fresh context.
+
+The Evaluation Agent reads:
+
+- `AGENTS.md`
+- `architecture.md`
+- the Planner Agent's specification
+- the Planner Agent's evaluation
+
+The Evaluation Agent is responsible for independently determining whether the
+implementation satisfies the specification.
+
+The Evaluation Agent may:
+
+- execute tests
+- inspect observable behavior
+- identify specification violations
+- identify implementation gaps
+
+The Evaluation Agent does not modify implementation.
+
+## Work File Lifecycle
+
+The Work File starts as a lightweight Director-owned request:
+
+```markdown
+# <Feature Title>
+
+## Goal
+
+...
+
+## Director Intent
+
+...
+```
+
+The Planner Agent constructs and maintains the remaining sections while
+executing the workflow.
+
+The Work File records:
+
+- the original request
+- Planner Agent decisions
+- specification path
+- implementation summary
+- implementation observations
+- assumptions
+- limitations
+- future work
+- evaluation path
+- evaluation result
+- final summary
+- Director acceptance status
+
+The Work File records paths to the specification and evaluation. It does not
+duplicate their contents.
+
+## Specification Lifecycle
+
+The Planner Agent writes a behavioral specification in `specs/`.
+
+The specification is the implementation contract. It describes observable
+behavior, public interfaces, inputs, outputs, failure handling, acceptance
+criteria, constraints, and out-of-scope work.
+
+Specifications must not prescribe implementation details unless those details
+are observable public requirements.
+
+## Evaluation Lifecycle
+
+The Planner Agent writes an evaluation specification in `evals/`.
+
+The evaluation is derived from the specification rather than the
+implementation. It describes observable scenarios and grading instructions.
+
+Evaluation is performed independently by an Evaluation Agent in fresh context.
+The Planner Agent records the evaluation result in the Work File.
+
+## Workflow Lifecycle
+
+1. The Director creates a Work File describing the desired feature.
+2. The Planner Agent performs architectural review, identifies assumptions and
+   risks, and records an implementation plan in the Work File.
+3. The Planner Agent writes a behavioral specification in `specs/` and records
+   its path in the Work File.
+4. The Planner Agent delegates implementation to an Implementation Agent.
+5. The Implementation Agent implements the specification, runs appropriate
+   tests, and reports observations.
+6. The Planner Agent records the implementation summary, observations,
+   assumptions, limitations, and future work in the Work File.
+7. The Planner Agent writes an evaluation specification in `evals/` and records
+   its path in the Work File.
+8. The Planner Agent delegates evaluation to a fresh-context Evaluation Agent.
+9. The Evaluation Agent reports scenario results and an overall verdict.
+10. The Planner Agent records the evaluation result and final summary in the
+    Work File.
+11. The Planner Agent stops.
+12. The Director reviews the completed Work File and accepts, rejects, or
+    requests additional work.
+
+## Planner Agent Stopping Condition
+
+The Planner Agent's responsibility is complete after it records:
+
+- implementation summary
+- implementation observations
+- assumptions
+- limitations
+- future work
+- evaluation result
+- final summary
+
+The Planner Agent does not:
+
+- merge branches
+- delete branches
+- push commits
+- accept completed work
+
+Final acceptance remains the Director's responsibility.
+
+## Guiding Principle
+
+If additional workflow complexity cannot be justified by improving the
+Director's original engineering process, it should not be added.

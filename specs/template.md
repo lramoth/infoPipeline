@@ -86,13 +86,14 @@ Explicitly excluded work.
 
 ## Completion
 
-For build sessions, append a build log entry to `eval_log.md` following `AGENTS.md`.
+For implementation sessions, report results to the Planner Agent for recording
+in the Work File.
 
-The build log must include:
+The implementation report must include:
 
 - spec used
 - summary of observable work completed
 - assumptions made
 - gaps or suspected bugs
 
-Build sessions must not write evaluation entries.
+Implementation sessions must not evaluate correctness against the specification.

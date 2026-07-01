@@ -6,7 +6,7 @@ Validate only the observable behavior described in `spec name`.
 
 Do not infer requirements that are not stated in the referenced specification.
 
-Do not grade or report implementation details in eval_log.md, including:
+Do not grade or report implementation details, including:
 - class names
 - method names
 - dataclasses
@@ -53,7 +53,9 @@ For each scenario:
 - PASS if the observable behavior matches the specification.
 - FAIL if the observable behavior differs from the specification.
 
-Append an evaluation entry to `eval_log.md` using the format in `AGENTS.md`:
+Report evaluation results to the Planner Agent for recording in the Work File.
+The report must include:
+
 - eval file used
 - PASS/FAIL result for each scenario
 - one-sentence product-behavior reason for each scenario result
@@ -61,4 +63,4 @@ Append an evaluation entry to `eval_log.md` using the format in `AGENTS.md`:
 
 Overall verdict is PASS only if every scenario passes.
 
-Evaluation sessions must not write build-log entries.
+Evaluation sessions must not modify implementation.
